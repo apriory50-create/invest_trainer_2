@@ -1,0 +1,381 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'models_data.dart';
+
+class SimulatorScreen extends StatefulWidget {
+  const SimulatorScreen({super.key});
+
+  @override
+  State<SimulatorScreen> createState() => _SimulatorScreenState();
+}
+
+class _SimulatorScreenState extends State<SimulatorScreen> {
+  double _cash = 100000.0;
+  final Map<String, int> _holdings = {};
+  final Map<String, double> _currentPrices = {
+    for (var a in marketAssets) a.id: a.price,
+  };
+
+  AssetItem? _selectedAssetForExplain;
+  MarketNews? _activeNews;
+  NewsOption? _chosenNewsOption;
+  double _lastNewsPortfolioDeltaRub = 0.0;
+
+  double get _portfolioAssetsValue {
+    double total = 0;
+    _holdings.forEach((id, qty) {
+      total += (_currentPrices[id] ?? 0) * qty;
+    });
+    return total;
+  }
+
+  double get _expectedAnnualIncomeRub {
+    double income = 0;
+    for (var asset in marketAssets) {
+      final qty = _holdings[asset.id] ?? 0;
+      if (qty > 0) {
+        final posValue = (_currentPrices[asset.id] ?? asset.price) * qty;
+        income += posValue * (asset.expectedYieldPct / 100.0);
+      }
+    }
+    return income;
+  }
+
+  void _buyAsset(AssetItem asset) {
+    final price = _currentPrices[asset.id] ?? asset.price;
+    if (_cash < price) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Недостаточно свободных денег в портфеле!')),
+      );
+      return;
+    }
+    setState(() {
+      _cash -= price;
+      _holdings[asset.id] = (_holdings[asset.id] ?? 0) + 1;
+      _selectedAssetForExplain = asset;
+    });
+  }
+
+  void _sellAsset(AssetItem asset) {
+    final currentQty = _holdings[asset.id] ?? 0;
+    if (currentQty <= 0) return;
+    final price = _currentPrices[asset.id] ?? asset.price;
+    setState(() {
+      _cash += price;
+      if (currentQty == 1) {
+        _holdings.remove(asset.id);
+      } else {
+        _holdings[asset.id] = currentQty - 1;
+      }
+      _selectedAssetForExplain = asset;
+    });
+  }
+
+  void _triggerRandomNews() {
+    if (_holdings.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Сначала купите хотя бы одну ценную бумагу в портфель!'),
+        ),
+      );
+      return;
+    }
+    final rnd = Random();
+    final news = marketNewsList[rnd.nextInt(marketNewsList.length)];
+    double totalDelta = 0.0;
+
+    setState(() {
+      for (var asset in marketAssets) {
+        final qty = _holdings[asset.id] ?? 0;
+        final impactPct = news.typeImpactPct[asset.type] ?? 0.0;
+        final oldPrice = _currentPrices[asset.id] ?? asset.price;
+        final newPrice = (oldPrice * (1.0 + impactPct / 100.0)).clamp(10.0, 100000.0);
+        if (qty > 0) {
+          totalDelta += (newPrice - oldPrice) * qty;
+        }
+        _currentPrices[asset.id] = newPrice;
+      }
+      _activeNews = news;
+      _chosenNewsOption = null;
+      _lastNewsPortfolioDeltaRub = totalDelta;
+    });
+  }
+
+  void _applyNewsAction(NewsOption option) {
+    if (_chosenNewsOption != null) return;
+    final baseValue = _portfolioAssetsValue + _cash;
+    final bonusRub = baseValue * (option.balanceBonusPct / 100.0);
+    setState(() {
+      _chosenNewsOption = option;
+      _cash = (_cash + bonusRub).clamp(0.0, 10000000.0);
+    });
+  }
+
+  void _resetSimulator() {
+    setState(() {
+      _cash = 100000.0;
+      _holdings.clear();
+      for (var a in marketAssets) {
+        _currentPrices[a.id] = a.price;
+      }
+      _selectedAssetForExplain = null;
+      _activeNews = null;
+      _chosenNewsOption = null;
+      _lastNewsPortfolioDeltaRub = 0.0;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final totalCapital = _cash + _portfolioAssetsValue;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Симулятор: Портфель и Новости'),
+        backgroundColor: const Color(0xFF1E293B),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: 'Сбросить портфель',
+            onPressed: _resetSimulator,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        children: [
+          _buildPortfolioHeader(totalCapital),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrangeAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: _triggerRandomNews,
+              icon: const Icon(Icons.newspaper),
+              label: const Text(
+                'СГЕНЕРИРОВАТЬ СЛУЧАЙНУЮ НОВОСТЬ',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          if (_activeNews != null) ...[
+            const SizedBox(height: 14),
+            _buildNewsImpactCard(_activeNews!),
+          ],
+          if (_selectedAssetForExplain != null) ...[
+            const SizedBox(height: 14),
+            _buildCalculationExplainCard(_selectedAssetForExplain!),
+          ],
+          const SizedBox(height: 18),
+          const Text(
+            'Биржевой стакан (купи бумагу и изучи её расчёт):',
+            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          ...marketAssets.map(_buildAssetRow),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPortfolioHeader(double totalCapital) {
+    final profit = totalCapital - 100000.0;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.tealAccent.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Общий капитал: ${totalCapital.toStringAsFixed(0)} ₽ (${profit >= 0 ? '+' : ''}${profit.toStringAsFixed(0)} ₽)',
+            style: TextStyle(
+              color: profit >= 0 ? Colors.greenAccent : Colors.redAccent,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Свободные деньги: ${_cash.toStringAsFixed(0)} ₽ | В бумагах: ${_portfolioAssetsValue.toStringAsFixed(0)} ₽',
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Расчетный годовой доход портфеля: +${_expectedAnnualIncomeRub.toStringAsFixed(0)} ₽ / год',
+            style: const TextStyle(color: Colors.amberAccent, fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalculationExplainCard(AssetItem asset) {
+    final qty = _holdings[asset.id] ?? 0;
+    final price = _currentPrices[asset.id] ?? asset.price;
+    final posSum = price * qty;
+    final yearlyRub = posSum * (asset.expectedYieldPct / 100.0);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amberAccent),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Разбор бумаги: ${asset.ticker} (${asset.type})',
+            style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'У вас в портфеле: $qty шт. на сумму ${posSum.toStringAsFixed(0)} ₽.\nОжидаемый доход позиции: +${yearlyRub.toStringAsFixed(0)} ₽ в год (${asset.expectedYieldPct}% годовых).',
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+          ),
+          const Divider(color: Colors.white24, height: 16),
+          Text('Формула: ${asset.formulaExplain}', style: const TextStyle(color: Colors.tealAccent, fontSize: 13)),
+          const SizedBox(height: 6),
+          Text('Как считается: ${asset.calcExplain}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          const SizedBox(height: 6),
+          Text('Главный показатель: ${asset.indicatorExplain}', style: const TextStyle(color: Colors.lightBlueAccent, fontSize: 13)),
+          const SizedBox(height: 6),
+          Text('Риски: ${asset.riskExplain}', style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewsImpactCard(MarketNews news) {
+    final isPositive = _lastNewsPortfolioDeltaRub >= 0;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF271722),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.deepOrangeAccent, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'СРОЧНАЯ НОВОСТЬ (${news.category}):',
+            style: const TextStyle(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(news.title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text(news.description, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          const SizedBox(height: 8),
+          Text(
+            'Моментальная переоценка вашего портфеля: ${isPositive ? '+' : ''}${_lastNewsPortfolioDeltaRub.toStringAsFixed(0)} ₽',
+            style: TextStyle(
+              color: isPositive ? Colors.greenAccent : Colors.redAccent,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Почему так произошло: ${news.portfolioImpactExplain}',
+            style: const TextStyle(color: Colors.amberAccent, fontSize: 13),
+          ),
+          const Divider(color: Colors.white24, height: 18),
+          const Text(
+            'Выберите ваше действие в ответ на новость:',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          ...news.options.map((opt) {
+            final isSelected = _chosenNewsOption == opt;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: isSelected ? Colors.greenAccent : Colors.white38),
+                  backgroundColor: isSelected ? Colors.white10 : Colors.transparent,
+                  padding: const EdgeInsets.all(12),
+                ),
+                onPressed: _chosenNewsOption == null ? () => _applyNewsAction(opt) : null,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(opt.actionText, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                ),
+              ),
+            );
+          }),
+          if (_chosenNewsOption != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black38,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _chosenNewsOption!.balanceBonusPct >= 0 ? Colors.greenAccent : Colors.redAccent,
+                ),
+              ),
+              child: Text(
+                'Разбор вашего решения (${_chosenNewsOption!.balanceBonusPct >= 0 ? '+' : ''}${_chosenNewsOption!.balanceBonusPct}% к капиталу):\n${_chosenNewsOption!.explanation}',
+                style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssetRow(AssetItem asset) {
+    final qty = _holdings[asset.id] ?? 0;
+    final price = _currentPrices[asset.id] ?? asset.price;
+    return Card(
+      color: const Color(0xFF1E293B),
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedAssetForExplain = asset),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${asset.ticker} • ${asset.type}',
+                      style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    Text(asset.name, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Цена: ${price.toStringAsFixed(0)} ₽ | Доходность: ~${asset.expectedYieldPct}% | Куплено: $qty шт.',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: qty > 0 ? () => _sellAsset(asset) : null,
+              icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
+            ),
+            IconButton(
+              onPressed: () => _buyAsset(asset),
+              icon: const Icon(Icons.add_circle, color: Colors.greenAccent),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
