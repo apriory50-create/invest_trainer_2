@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'models_data.dart';
+import 'models.dart';
+import 'market_data.dart';
 
 class SimulatorScreen extends StatefulWidget {
   const SimulatorScreen({super.key});
@@ -10,6 +11,7 @@ class SimulatorScreen extends StatefulWidget {
 }
 
 class _SimulatorScreenState extends State<SimulatorScreen> {
+  double _initialCapital = 100000.0;
   double _cash = 100000.0;
   final Map<String, int> _holdings = {};
   final Map<String, double> _currentPrices = {
@@ -20,6 +22,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   MarketNews? _activeNews;
   NewsOption? _chosenNewsOption;
   double _lastNewsPortfolioDeltaRub = 0.0;
+  final List<String> _lastNewsAssetBreakdown = [];
 
   double get _portfolioAssetsValue {
     double total = 0;
@@ -45,7 +48,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     final price = _currentPrices[asset.id] ?? asset.price;
     if (_cash < price) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Недостаточно свободных денег в портфеле!')),
+        const SnackBar(content: Text('Недостаточно свободных денег! Продайте часть активов или пополните счет.')),
       );
       return;
     }
@@ -74,30 +77,35 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   void _triggerRandomNews() {
     if (_holdings.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Сначала купите хотя бы одну ценную бумагу в портфель!'),
-        ),
+        const SnackBar(content: Text('Портфель пуст! Сначала купите хотя бы одну ценную бумагу ниже.')),
       );
       return;
     }
     final rnd = Random();
     final news = marketNewsList[rnd.nextInt(marketNewsList.length)];
     double totalDelta = 0.0;
+    final List<String> breakdown = [];
 
     setState(() {
       for (var asset in marketAssets) {
         final qty = _holdings[asset.id] ?? 0;
         final impactPct = news.typeImpactPct[asset.type] ?? 0.0;
         final oldPrice = _currentPrices[asset.id] ?? asset.price;
-        final newPrice = (oldPrice * (1.0 + impactPct / 100.0)).clamp(10.0, 100000.0);
+        final newPrice = (oldPrice * (1.0 + impactPct / 100.0)).clamp(10.0, 500000.0);
         if (qty > 0) {
-          totalDelta += (newPrice - oldPrice) * qty;
+          final deltaRub = (newPrice - oldPrice) * qty;
+          totalDelta += deltaRub;
+          final sign = deltaRub >= 0 ? '+' : '';
+          breakdown.add('${asset.ticker} ($qty шт.): $sign${deltaRub.toStringAsFixed(0)} ₽ ($sign$impactPct%)');
         }
         _currentPrices[asset.id] = newPrice;
       }
       _activeNews = news;
       _chosenNewsOption = null;
       _lastNewsPortfolioDeltaRub = totalDelta;
+      _lastNewsAssetBreakdown
+        ..clear()
+        ..addAll(breakdown);
     });
   }
 
@@ -107,13 +115,14 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     final bonusRub = baseValue * (option.balanceBonusPct / 100.0);
     setState(() {
       _chosenNewsOption = option;
-      _cash = (_cash + bonusRub).clamp(0.0, 10000000.0);
+      _cash = (_cash + bonusRub).clamp(0.0, 100000000.0);
     });
   }
 
-  void _resetSimulator() {
+  void _resetSimulator(double newCapital) {
     setState(() {
-      _cash = 100000.0;
+      _initialCapital = newCapital;
+      _cash = newCapital;
       _holdings.clear();
       for (var a in marketAssets) {
         _currentPrices[a.id] = a.price;
@@ -122,6 +131,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
       _activeNews = null;
       _chosenNewsOption = null;
       _lastNewsPortfolioDeltaRub = 0.0;
+      _lastNewsAssetBreakdown.clear();
     });
   }
 
@@ -135,10 +145,16 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
         backgroundColor: const Color(0xFF1E293B),
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            tooltip: 'Сбросить портфель',
-            onPressed: _resetSimulator,
-            icon: const Icon(Icons.refresh),
+          PopupMenuButton<double>(
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            tooltip: 'Выбрать стартовый капитал (сброс)',
+            onSelected: _resetSimulator,
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 50000, child: Text('Начать с 50 000 ₽')),
+              PopupMenuItem(value: 100000, child: Text('Начать со 100 000 ₽')),
+              PopupMenuItem(value: 500000, child: Text('Начать с 500 000 ₽')),
+              PopupMenuItem(value: 1000000, child: Text('Начать с 1 000 000 ₽')),
+            ],
           ),
         ],
       ),
@@ -146,7 +162,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         children: [
           _buildPortfolioHeader(totalCapital),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -156,7 +172,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               onPressed: _triggerRandomNews,
-              icon: const Icon(Icons.newspaper),
+              icon: const Icon(Icons.bolt),
               label: const Text(
                 'СГЕНЕРИРОВАТЬ СЛУЧАЙНУЮ НОВОСТЬ',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -171,10 +187,10 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
             const SizedBox(height: 14),
             _buildCalculationExplainCard(_selectedAssetForExplain!),
           ],
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           const Text(
-            'Биржевой стакан (купи бумагу и изучи её расчёт):',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            'Все виды ценных бумаг (нажми + чтобы купить и увидеть формулу расчета дохода):',
+            style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
           ...marketAssets.map(_buildAssetRow),
@@ -184,7 +200,10 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   }
 
   Widget _buildPortfolioHeader(double totalCapital) {
-    final profit = totalCapital - 100000.0;
+    final profit = totalCapital - _initialCapital;
+    final profitPct = _initialCapital > 0 ? (profit / _initialCapital) * 100 : 0.0;
+    final monthlyIncome = _expectedAnnualIncomeRub / 12.0;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -196,10 +215,10 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Общий капитал: ${totalCapital.toStringAsFixed(0)} ₽ (${profit >= 0 ? '+' : ''}${profit.toStringAsFixed(0)} ₽)',
+            'Капитал: ${totalCapital.toStringAsFixed(0)} ₽ (${profit >= 0 ? '+' : ''}${profit.toStringAsFixed(0)} ₽ / ${profit >= 0 ? '+' : ''}${profitPct.toStringAsFixed(1)}%)',
             style: TextStyle(
               color: profit >= 0 ? Colors.greenAccent : Colors.redAccent,
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -210,8 +229,8 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Расчетный годовой доход портфеля: +${_expectedAnnualIncomeRub.toStringAsFixed(0)} ₽ / год',
-            style: const TextStyle(color: Colors.amberAccent, fontSize: 14, fontWeight: FontWeight.w600),
+            'Расчетный пассивный доход: +${_expectedAnnualIncomeRub.toStringAsFixed(0)} ₽/год (~${monthlyIncome.toStringAsFixed(0)} ₽/мес)',
+            style: const TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -223,32 +242,37 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     final price = _currentPrices[asset.id] ?? asset.price;
     final posSum = price * qty;
     final yearlyRub = posSum * (asset.expectedYieldPct / 100.0);
+    final monthlyRub = yearlyRub / 12.0;
+    final ndfl13 = yearlyRub * 0.13;
+    final netYearlyRub = yearlyRub - ndfl13;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amberAccent),
+        border: Border.all(color: Colors.amberAccent, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Разбор бумаги: ${asset.ticker} (${asset.type})',
-            style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 16),
+            'РАСЧЕТ И ФОРМУЛА ПО БУМАГЕ: ${asset.ticker} (${asset.type})',
+            style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 15),
           ),
           const SizedBox(height: 6),
           Text(
-            'У вас в портфеле: $qty шт. на сумму ${posSum.toStringAsFixed(0)} ₽.\nОжидаемый доход позиции: +${yearlyRub.toStringAsFixed(0)} ₽ в год (${asset.expectedYieldPct}% годовых).',
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            'В портфеле: $qty шт. × ${price.toStringAsFixed(0)} ₽ = ${posSum.toStringAsFixed(0)} ₽\n'
+            'Доход до налога (${asset.expectedYieldPct}%): +${yearlyRub.toStringAsFixed(0)} ₽/год (+${monthlyRub.toStringAsFixed(0)} ₽/мес)\n'
+            'Чистыми после НДФЛ 13%: +${netYearlyRub.toStringAsFixed(0)} ₽/год (налог ${ndfl13.toStringAsFixed(0)} ₽ или 0 ₽ на ИИС-3)',
+            style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
           ),
           const Divider(color: Colors.white24, height: 16),
           Text('Формула: ${asset.formulaExplain}', style: const TextStyle(color: Colors.tealAccent, fontSize: 13)),
           const SizedBox(height: 6),
-          Text('Как считается: ${asset.calcExplain}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          Text('Пояснение расчета: ${asset.calcExplain}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
           const SizedBox(height: 6),
-          Text('Главный показатель: ${asset.indicatorExplain}', style: const TextStyle(color: Colors.lightBlueAccent, fontSize: 13)),
+          Text('Показатель: ${asset.indicatorExplain}', style: const TextStyle(color: Colors.lightBlueAccent, fontSize: 13)),
           const SizedBox(height: 6),
           Text('Риски: ${asset.riskExplain}', style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
         ],
@@ -269,7 +293,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'СРОЧНАЯ НОВОСТЬ (${news.category}):',
+            'НОВОСТЬ НА РЫНКЕ (${news.category}):',
             style: const TextStyle(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
@@ -278,20 +302,27 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
           Text(news.description, style: const TextStyle(color: Colors.white70, fontSize: 13)),
           const SizedBox(height: 8),
           Text(
-            'Моментальная переоценка вашего портфеля: ${isPositive ? '+' : ''}${_lastNewsPortfolioDeltaRub.toStringAsFixed(0)} ₽',
+            'Итого влияние на ваш портфель: ${isPositive ? '+' : ''}${_lastNewsPortfolioDeltaRub.toStringAsFixed(0)} ₽',
             style: TextStyle(
               color: isPositive ? Colors.greenAccent : Colors.redAccent,
               fontWeight: FontWeight.bold,
+              fontSize: 15,
             ),
           ),
-          const SizedBox(height: 6),
+          if (_lastNewsAssetBreakdown.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            ..._lastNewsAssetBreakdown.map(
+              (line) => Text('• $line', style: const TextStyle(color: Colors.white, fontSize: 12)),
+            ),
+          ],
+          const SizedBox(height: 8),
           Text(
             'Почему так произошло: ${news.portfolioImpactExplain}',
             style: const TextStyle(color: Colors.amberAccent, fontSize: 13),
           ),
           const Divider(color: Colors.white24, height: 18),
           const Text(
-            'Выберите ваше действие в ответ на новость:',
+            'Выберите ваше действие:',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
           ),
           const SizedBox(height: 8),
@@ -325,7 +356,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                 ),
               ),
               child: Text(
-                'Разбор вашего решения (${_chosenNewsOption!.balanceBonusPct >= 0 ? '+' : ''}${_chosenNewsOption!.balanceBonusPct}% к капиталу):\n${_chosenNewsOption!.explanation}',
+                'Пояснение по вашему действию (эффект ${_chosenNewsOption!.balanceBonusPct >= 0 ? '+' : ''}${_chosenNewsOption!.balanceBonusPct}% к портфелю):\n${_chosenNewsOption!.explanation}',
                 style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
               ),
             ),
@@ -358,7 +389,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                     Text(asset.name, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                     const SizedBox(height: 4),
                     Text(
-                      'Цена: ${price.toStringAsFixed(0)} ₽ | Доходность: ~${asset.expectedYieldPct}% | Куплено: $qty шт.',
+                      'Цена: ${price.toStringAsFixed(0)} ₽ | Ожид. доход: ~${asset.expectedYieldPct}% | В портфеле: $qty шт.',
                       style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ],
