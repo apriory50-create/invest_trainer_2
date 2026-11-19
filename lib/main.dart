@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'real_investor_sim.dart';
-import 'news_screen.dart';
+import 'academy_screen.dart';
+import 'calculators_screen.dart';
 
 void main() {
   runApp(const InvestTrainerApp());
@@ -14,56 +14,52 @@ class InvestTrainerApp extends StatefulWidget {
 }
 
 class _InvestTrainerAppState extends State<InvestTrainerApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.dark;
   int _tabIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Симулятор и Новости Инвестора',
+      title: 'Тренажер Инвестора',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
+        colorSchemeSeed: Colors.teal,
         useMaterial3: true,
         brightness: Brightness.light,
       ),
       darkTheme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
+        colorSchemeSeed: Colors.teal,
         useMaterial3: true,
         brightness: Brightness.dark,
       ),
       home: Scaffold(
-        appBar: AppBar(
-          title: Text(_tabIndex == 0 ? 'Симулятор Инвестора' : 'Разбор Новостей (80+)'),
-          actions: [
-            IconButton(
-              tooltip: 'Сменить тему',
-              icon: Icon(
-                _themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
-              ),
-              onPressed: () {
-                setState(() {
-                  _themeMode =
-                      _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-                });
-              },
-            ),
-          ],
-        ),
-        body: _tabIndex == 0 ? const RealInvestorSimScreen() : const NewsScreen(),
+        body: _tabIndex == 0 ? const AcademyScreen() : const CalculatorsScreen(),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _tabIndex,
           onDestinationSelected: (i) => setState(() => _tabIndex = i),
           destinations: const [
-            NavigationDestination(icon: Icon(Icons.candlestick_chart), label: 'Симулятор'),
-            NavigationDestination(icon: Icon(Icons.newspaper), label: 'Новости'),
+            NavigationDestination(icon: Icon(Icons.school), label: 'Академия'),
+            NavigationDestination(icon: Icon(Icons.calculate), label: 'Калькуляторы'),
           ],
+        ),
+        floatingActionButton: FloatingActionButton.small(
+          tooltip: 'Сменить тему',
+          onPressed: () {
+            setState(() {
+              _themeMode =
+                  _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+            });
+          },
+          child: Icon(
+            _themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+          ),
         ),
       ),
     );
   }
 }
+
 
 
 
