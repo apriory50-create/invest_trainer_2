@@ -117,11 +117,17 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> {
                 const SizedBox(height: 8),
                 Text('• Цена покупки в стакане: ${_fmt(buyPriceRub)} (${_ofzPricePercent.toStringAsFixed(0)}%)'),
                 Text('• Текущая купонная доходность: ${currentCouponYield.toStringAsFixed(1)}% годовых'),
-                Text('• Рост тела при снижении ставки на ${_cbRateDrop.toStringAsFixed(1)}%: +${bodyUpsidePercent.toStringAsFixed(1)}% (+${_fmt(bodyProfitRub)})'),
+                Text(
+                  '• Рост тела при снижении ставки на ${_cbRateDrop.toStringAsFixed(1)}%: +${bodyUpsidePercent.toStringAsFixed(1)}% (+${_fmt(bodyProfitRub)})',
+                ),
                 const Divider(height: 18),
                 Text(
                   'Итого за год разворота ставки (купон + рост цены): +${firstYearTotalPercent.toStringAsFixed(1)}% (+${_fmt(firstYearTotalRub)})',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Colors.amberAccent),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.5,
+                    color: Colors.amberAccent,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -214,7 +220,11 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> {
                 const Divider(height: 18),
                 Text(
                   'Итоговый капитал на ИИС-3 (с реинвестированием вычетов): ${_fmt(portfolioValue)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Color(0xFF00E676)),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.5,
+                    color: Color(0xFF00E676),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -226,7 +236,10 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        const Text('Выбери свою ставку НДФЛ (прогрессивная шкала 2025–2026):', style: TextStyle(fontWeight: FontWeight.w600)),
+        const Text(
+          'Выбери свою ставку НДФЛ (прогрессивная шкала 2025–2026):',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -304,12 +317,20 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> {
                 const Divider(height: 18),
                 Text(
                   'Итоговый капитал через ${_compYears.toStringAsFixed(0)} лет: ${_fmt(total)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF00E676)),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Color(0xFF00E676),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Пассивная зарплата купонами/дивидендами с этого капитала: ~${_fmt(passiveMonthlyIncome)} в месяц!',
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.amberAccent),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Colors.amberAccent,
+                  ),
                 ),
               ],
             ),
@@ -371,7 +392,10 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(title, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500)),
+                  child: Text(
+                    title,
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -392,3 +416,4 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> {
     );
   }
 }
+
