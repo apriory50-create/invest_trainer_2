@@ -40,27 +40,39 @@ class Lesson {
 
 class MarketScenario {
   final int id;
-  final String category;
   final String title;
-  final String situation;
-  final String indirectClues;
-  final String assetAffected;
-  final List<String> actions;
-  final int bestActionIndex;
-  final double priceImpactPercent;
-  final String detailedBreakdown;
+  final String ticker;
+  final String description;
+  final List<String> options;
+  final int correctIndex;
+  final String explanation;
+  final double priceChangePercent;
 
   const MarketScenario({
     required this.id,
-    required this.category,
     required this.title,
-    required this.situation,
-    required this.indirectClues,
-    required this.assetAffected,
-    required this.actions,
-    required this.bestActionIndex,
-    required this.priceImpactPercent,
-    required this.detailedBreakdown,
+    required this.ticker,
+    required this.description,
+    required this.options,
+    required this.correctIndex,
+    required this.explanation,
+    required this.priceChangePercent,
+  });
+}
+
+class StockAsset {
+  final String ticker;
+  final String name;
+  final String type;
+  final double price;
+  final double dividendYield;
+
+  const StockAsset({
+    required this.ticker,
+    required this.name,
+    required this.type,
+    required this.price,
+    required this.dividendYield,
   });
 }
 
@@ -86,3 +98,4 @@ class AssetPosition {
   double get profitPercent =>
       averagePrice > 0 ? ((currentPrice - averagePrice) / averagePrice) * 100 : 0;
 }
+
