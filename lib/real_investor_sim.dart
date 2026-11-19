@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'sim_models.dart';
+import 'sim_scenarios.dart';
 import 'trade_coach.dart';
 
 class RealInvestorSimScreen extends StatefulWidget {
@@ -10,21 +11,21 @@ class RealInvestorSimScreen extends StatefulWidget {
 }
 
 class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
-  static const double _commissionRate = 0.0005; // 0.05%
-  static const double _taxRate = 0.13; // 13%
+  static const double _feeRate = 0.0005; // 0.05% комиссия
+  static const double _taxRate = 0.13; // 13% налог
 
-  double _cash = 250000.0;
-  double _realizedTaxPaid = 0.0;
-  double _couponsReceived = 0.0;
-  int _selectedIdx = 0;
-  int _lotsToTrade = 1;
-  bool _enforceFilters = true;
-  bool _lastRateWentUp = false;
-  final List<bool> _filtersPassed = [true, true, false, true, false];
-  final List<TradeRecord> _history = [];
-  TradeAudit? _latestAudit;
+  DateTime _simDate = DateTime(2026, 11, 19);
+  double _keyRatePct = 18.0;
+  double _cash = 300000.0;
+  double _totalIncomeReceived = 0.0;
+  double _totalTaxPaid = 0.0;
 
-  late final List<SimInstrument> _market = [
+  int _selectedInstrumentIdx = 0;
+  int _lots = 1;
+  int _selectedScenarioIdx = 0;
+  CoachComment? _comment;
+
+  late final List<SimInstrument> _instruments = [
     SimInstrument(
       ticker: 'SU26238RMFS4',
       name: 'ОФЗ 26238 (длинный госдолг)',
@@ -32,146 +33,171 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
       sector: 'Госдолг',
       lotSize: 1,
       nominal: 1000,
-      accruedInterestPerUnit: 24.50,
-      annualYieldPct: 12.8,
+      annualCouponOrDivPct: 12.25,
       debtToEbitda: 0.0,
-      priceRub: 595.0,
+      maturityMonthsLeft: 168,
+      rateSensitivity: 1.8,
+      priceRub: 590.0,
+      accruedInterestPerUnit: 22.40,
+    ),
+    SimInstrument(
+      ticker: 'SU29014RMFS6',
+      name: 'ОФЗ 29014 (флоатер / переменный купон)',
+      kind: AssetKind.ofz,
+      sector: 'Госдолг',
+      lotSize: 1,
+      nominal: 1000,
+      annualCouponOrDivPct: 17.5,
+      debtToEbitda: 0.0,
+      maturityMonthsLeft: 48,
+      rateSensitivity: 0.2,
+      priceRub: 995.0,
+      accruedInterestPerUnit: 14.10,
     ),
     SimInstrument(
       ticker: 'RU000A1074V6',
-      name: 'Борец Капитал 001P-01',
+      name: 'Корп. облигация Промышленность-01',
       kind: AssetKind.bond,
-      sector: 'Нефтесервис',
+      sector: 'Корп. долг',
       lotSize: 1,
       nominal: 1000,
-      accruedInterestPerUnit: 18.20,
-      annualYieldPct: 19.5,
-      debtToEbitda: 1.4,
-      priceRub: 960.0,
+      annualCouponOrDivPct: 19.0,
+      debtToEbitda: 1.5,
+      maturityMonthsLeft: 24,
+      rateSensitivity: 0.9,
+      priceRub: 965.0,
+      accruedInterestPerUnit: 16.80,
     ),
     SimInstrument(
       ticker: 'SBER',
-      name: 'Сбербанк (обыкновенные)',
+      name: 'Акция Сбербанк (финансы)',
       kind: AssetKind.stock,
       sector: 'Финансы',
       lotSize: 10,
-      nominal: 3,
-      accruedInterestPerUnit: 0.0,
-      annualYieldPct: 11.5,
+      nominal: 3.0,
+      annualCouponOrDivPct: 11.5,
       debtToEbitda: 0.0,
+      maturityMonthsLeft: 0,
+      rateSensitivity: 1.0,
       priceRub: 285.0,
+      accruedInterestPerUnit: 0.0,
+    ),
+    SimInstrument(
+      ticker: 'LKOH',
+      name: 'Акция ЛУКОЙЛ (нефть и газ)',
+      kind: AssetKind.stock,
+      sector: 'Нефть и газ',
+      lotSize: 1,
+      nominal: 0.025,
+      annualCouponOrDivPct: 12.0,
+      debtToEbitda: 0.2,
+      maturityMonthsLeft: 0,
+      rateSensitivity: 0.7,
+      priceRub: 7150.0,
+      accruedInterestPerUnit: 0.0,
     ),
     SimInstrument(
       ticker: 'LQDT',
-      name: 'ВИМ Ликвидность (денежный рынок)',
+      name: 'БПИФ Денежный рынок (ликвидность)',
       kind: AssetKind.etf,
       sector: 'Ликвидность',
       lotSize: 1,
       nominal: 1.0,
-      accruedInterestPerUnit: 0.0,
-      annualYieldPct: 17.8,
+      annualCouponOrDivPct: 17.8,
       debtToEbitda: 0.0,
+      maturityMonthsLeft: 0,
+      rateSensitivity: -0.4,
       priceRub: 1.54,
+      accruedInterestPerUnit: 0.0,
+    ),
+    SimInstrument(
+      ticker: 'GLDRUB_TOM',
+      name: 'БПИФ / инструмент на Золото',
+      kind: AssetKind.etf,
+      sector: 'Золото',
+      lotSize: 1,
+      nominal: 1.0,
+      annualCouponOrDivPct: 0.0,
+      debtToEbitda: 0.0,
+      maturityMonthsLeft: 0,
+      rateSensitivity: -0.3,
+      priceRub: 86.0,
+      accruedInterestPerUnit: 0.0,
     ),
   ];
 
-  late final Map<String, HoldingPosition> _portfolio = {
-    for (final item in _market) item.ticker: HoldingPosition(instrument: item),
+  late final Map<String, HoldingPosition> _holdings = {
+    for (final i in _instruments) i.ticker: HoldingPosition(instrument: i),
   };
 
-  static const List<String> _filterTexts = [
-    '1. Ставка ЦБ и макрофон не бьют по бумаге',
-    '2. Долговая нагрузка и отчетность в норме',
-    '3. Цена не на пике резкого импульса',
-    '4. Размер позиции не перегружает портфель',
-    '5. Заранее задан план выхода и стоп-уровень',
-  ];
+  double get _portfolioTotal =>
+      _cash + _holdings.values.fold(0.0, (sum, p) => sum + p.marketValue);
 
-  int get _passedCount => _filtersPassed.where((e) => e).length;
+  String get _formattedDate {
+    final d = _simDate.day.toString().padLeft(2, '0');
+    final m = _simDate.month.toString().padLeft(2, '0');
+    return '$d.$m.${_simDate.year}';
+  }
 
-  double get _portfolioMarketTotal =>
-      _cash + _portfolio.values.fold(0.0, (s, p) => s + p.marketValue);
-
-  void _showMsg(String text) {
+  void _notify(String text) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
-  void _buySelected() {
-    final inst = _market[_selectedIdx];
-    final pos = _portfolio[inst.ticker]!;
-    final units = _lotsToTrade * inst.lotSize;
+  void _buy() {
+    final inst = _instruments[_selectedInstrumentIdx];
+    final pos = _holdings[inst.ticker]!;
+    final units = _lots * inst.lotSize;
     if (units <= 0) return;
-
-    if (_enforceFilters && _passedCount < 4) {
-      _showMsg('Пройдено фильтров: $_passedCount/5. Отметь минимум 4 или сними строгий режим.');
-      return;
-    }
 
     final cleanSum = units * inst.priceRub;
     final nkdSum = units * inst.accruedInterestPerUnit;
-    final fee = (cleanSum + nkdSum) * _commissionRate;
+    final fee = (cleanSum + nkdSum) * _feeRate;
     final totalCost = cleanSum + nkdSum + fee;
 
     if (totalCost > _cash) {
-      _showMsg('Не хватает кэша: нужно ${totalCost.toStringAsFixed(2)} ₽, доступно ${_cash.toStringAsFixed(2)} ₽.');
+      _notify('Не хватает средств: нужно ${totalCost.toStringAsFixed(2)} ₽, доступно ${_cash.toStringAsFixed(2)} ₽.');
       return;
     }
 
-    final totalBefore = _portfolioMarketTotal;
-    final cashAfter = _cash - totalCost;
+    final beforeTotal = _portfolioTotal;
+    final afterCash = _cash - totalCost;
 
     setState(() {
-      final newUnits = pos.units + units;
-      final newCleanBasis = pos.costBasis + cleanSum;
-      pos.avgCleanPriceRub = newCleanBasis / newUnits;
+      final nextUnits = pos.units + units;
+      pos.avgCleanPriceRub = (pos.costBasis + cleanSum) / nextUnits;
       pos.paidNkdRub += nkdSum;
-      pos.units = newUnits;
-      _cash = cashAfter;
+      pos.units = nextUnits;
+      _cash = afterCash;
 
-      _history.insert(
-        0,
-        TradeRecord(
-          side: 'КУПЛЯ',
-          ticker: inst.ticker,
-          units: units,
-          totalRub: totalCost,
-          feeRub: fee,
-          nkdRub: nkdSum,
-          taxRub: 0.0,
-          note: 'Списано с учетом НКД и комиссии 0.05%',
-        ),
-      );
-
-      _latestAudit = TradeCoach.auditBuy(
+      _comment = TradeCoach.reviewBuy(
         instrument: inst,
         position: pos,
         units: units,
         totalCost: totalCost,
         nkdSum: nkdSum,
         feeRub: fee,
-        cashAfter: cashAfter,
-        portfolioTotalBefore: totalBefore,
-        passedFilters: _passedCount,
-        lastRateWentUp: _lastRateWentUp,
+        cashAfter: afterCash,
+        portfolioBefore: beforeTotal,
+        currentKeyRatePct: _keyRatePct,
       );
     });
   }
 
-  void _sellSelected() {
-    final inst = _market[_selectedIdx];
-    final pos = _portfolio[inst.ticker]!;
-    final units = _lotsToTrade * inst.lotSize;
+  void _sell() {
+    final inst = _instruments[_selectedInstrumentIdx];
+    final pos = _holdings[inst.ticker]!;
+    final units = _lots * inst.lotSize;
 
     if (units <= 0 || pos.units < units) {
-      _showMsg('Недостаточно бумаг для продажи (в портфеле: ${pos.units} шт.).');
+      _notify('Недостаточно бумаг для продажи (есть ${pos.units} шт.).');
       return;
     }
 
-    final grossProceeds = units * inst.priceRub;
-    final fee = grossProceeds * _commissionRate;
-    final profit = (inst.priceRub - pos.avgCleanPriceRub) * units - fee;
-    final tax = profit > 0 ? profit * _taxRate : 0.0;
-    final netProceeds = grossProceeds - fee - tax;
+    final gross = units * inst.priceRub;
+    final fee = gross * _feeRate;
+    final pnl = (inst.priceRub - pos.avgCleanPriceRub) * units - fee;
+    final tax = pnl > 0 ? pnl * _taxRate : 0.0;
+    final net = gross - fee - tax;
 
     setState(() {
       pos.units -= units;
@@ -179,84 +205,116 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
         pos.avgCleanPriceRub = 0.0;
         pos.paidNkdRub = 0.0;
       }
-      _cash += netProceeds;
-      _realizedTaxPaid += tax;
+      _cash += net;
+      _totalTaxPaid += tax;
 
-      _history.insert(
-        0,
-        TradeRecord(
-          side: 'ПРОДАЖА',
-          ticker: inst.ticker,
-          units: units,
-          totalRub: netProceeds,
-          feeRub: fee,
-          nkdRub: 0.0,
-          taxRub: tax,
-          note: tax > 0 ? 'Удержан НДФЛ 13% с прибыли' : 'Налог не удержан',
-        ),
-      );
-
-      _latestAudit = TradeCoach.auditSell(
+      _comment = TradeCoach.reviewSell(
         instrument: inst,
         position: pos,
         units: units,
-        netProceeds: netProceeds,
+        netProceeds: net,
         feeRub: fee,
         taxRub: tax,
-        realizedProfit: profit,
+        realizedPnl: pnl,
       );
     });
   }
 
-  void _simulateRateShock(bool rateUp) {
+  void _applyScenario() {
+    final sc = SimScenarios.items[_selectedScenarioIdx];
+    final beforeTotal = _portfolioTotal;
+
     setState(() {
-      _lastRateWentUp = rateUp;
-      for (final inst in _market) {
-        double pct = 0.0;
-        if (inst.kind == AssetKind.ofz) pct = rateUp ? -4.5 : 5.0;
-        if (inst.kind == AssetKind.bond) pct = rateUp ? -1.8 : 2.0;
-        if (inst.kind == AssetKind.stock) pct = rateUp ? -2.2 : 2.8;
-        if (inst.kind == AssetKind.etf) pct = rateUp ? 0.6 : -0.4;
-        inst.priceRub = double.parse((inst.priceRub * (1 + pct / 100)).toStringAsFixed(2));
+      _keyRatePct = (_keyRatePct + sc.keyRateDeltaPct).clamp(2.0, 35.0);
+      for (final inst in _instruments) {
+        final shift = sc.priceShiftPct[inst.kind] ?? 0.0;
+        inst.priceRub = double.parse((inst.priceRub * (1 + shift / 100)).toStringAsFixed(2));
       }
+      _comment = TradeCoach.reviewScenario(
+        scenario: sc,
+        newKeyRatePct: _keyRatePct,
+        portfolioBefore: beforeTotal,
+        portfolioAfter: _portfolioTotal,
+      );
     });
-    _showMsg(rateUp
-        ? 'Событие: Ставка ЦБ повышена. Длинные ОФЗ просели, фонд ликвидности подрос.'
-        : 'Событие: Ставка ЦБ снижена. Длинные ОФЗ и акции получили импульс роста.');
   }
 
-  void _accrueQuarterCoupon() {
-    double netCoupons = 0.0;
+  void _advanceTime(int days) {
+    double netAdded = 0.0;
+    double taxTaken = 0.0;
+
     setState(() {
-      for (final pos in _portfolio.values) {
-        if (pos.units > 0 && pos.instrument.annualYieldPct > 0) {
-          final gross = pos.marketValue * (pos.instrument.annualYieldPct / 100) / 4;
+      _simDate = _simDate.add(Duration(days: days));
+
+      for (final inst in _instruments) {
+        if (inst.kind == AssetKind.ofz || inst.kind == AssetKind.bond) {
+          final dailyNkd = (inst.nominal * (inst.annualCouponOrDivPct / 100)) / 365.0;
+          inst.accruedInterestPerUnit = double.parse(
+            ((inst.accruedInterestPerUnit + dailyNkd * days) % (inst.nominal * 0.12)).toStringAsFixed(2),
+          );
+        } else if (inst.ticker == 'LQDT') {
+          final dailyGrowth = (_keyRatePct / 100) / 365.0;
+          inst.priceRub = double.parse(
+            (inst.priceRub * (1 + dailyGrowth * days)).toStringAsFixed(4),
+          );
+        }
+      }
+
+      for (final pos in _holdings.values) {
+        if (pos.units > 0 && pos.instrument.ticker != 'LQDT' && pos.instrument.annualCouponOrDivPct > 0) {
+          final gross = pos.marketValue * (pos.instrument.annualCouponOrDivPct / 100) * (days / 365.0);
           final tax = pos.instrument.kind == AssetKind.ofz ? 0.0 : gross * _taxRate;
           final net = gross - tax;
           _cash += net;
-          _couponsReceived += net;
-          _realizedTaxPaid += tax;
-          netCoupons += net;
+          _totalIncomeReceived += net;
+          _totalTaxPaid += tax;
+          netAdded += net;
+          taxTaken += tax;
         }
       }
+
+      _comment = CoachComment(
+        tag: 'ВРЕМЯ',
+        headline: 'Продвижение вперед на $days дн. → $_formattedDate',
+        details: [
+          'Начислено купонов/дивидендов (после налогов): +${netAdded.toStringAsFixed(2)} ₽.',
+          'Удержано налога с выплат: ${taxTaken.toStringAsFixed(2)} ₽.',
+          'Текущий капитал портфеля: ${_portfolioTotal.toStringAsFixed(2)} ₽.',
+        ],
+        whySoNotOtherwise: 'Со временем у облигаций копится НКД и приходят выплаты, у акций бывают дивиденды, а у фонда ликвидности растет цена пая.',
+        advice: 'Оценивай результат на дистанции и проверяй, не пора ли скорректировать доли бумаг в портфеле.',
+        watchNext: [
+          'Новый остаток кэша (${_cash.toStringAsFixed(2)} ₽) и выплаченный доход.',
+          'Изменения цен бумаг и накопленный НКД.',
+        ],
+      );
     });
-    _showMsg('Начислено выплат за квартал (после налогов): +${netCoupons.toStringAsFixed(2)} ₽');
   }
 
-  Color _verdictColor(String verdict) {
-    if (verdict == 'ПРАВИЛЬНО') return Colors.green;
-    if (verdict == 'ОШИБКА') return Colors.red;
-    return Colors.orange;
+  Color _tagColor(String tag) {
+    switch (tag) {
+      case 'ПРАВИЛЬНО':
+        return Colors.green;
+      case 'ОШИБКА':
+        return Colors.red;
+      case 'ВНИМАНИЕ':
+        return Colors.orange;
+      case 'СЦЕНАРИЙ':
+        return Colors.indigo;
+      default:
+        return Colors.teal;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final inst = _market[_selectedIdx];
-    final units = _lotsToTrade * inst.lotSize;
+    final inst = _instruments[_selectedInstrumentIdx];
+    final units = _lots * inst.lotSize;
     final estClean = units * inst.priceRub;
     final estNkd = units * inst.accruedInterestPerUnit;
-    final estFee = (estClean + estNkd) * _commissionRate;
+    final estFee = (estClean + estNkd) * _feeRate;
     final estTotal = estClean + estNkd + estFee;
+    final scenario = SimScenarios.items[_selectedScenarioIdx];
 
     return ListView(
       padding: const EdgeInsets.all(12),
@@ -268,12 +326,14 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Счет инвестора', style: TextStyle(fontSize: 13)),
-                Text('${_portfolioMarketTotal.toStringAsFixed(2)} ₽',
+                Text('Дата: $_formattedDate • Ключевая ставка: ${_keyRatePct.toStringAsFixed(1)}%',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 4),
+                Text('Капитал: ${_portfolioTotal.toStringAsFixed(2)} ₽',
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
-                  'Кэш: ${_cash.toStringAsFixed(2)} ₽ • Выплаты: +${_couponsReceived.toStringAsFixed(2)} ₽ • Налоги: ${_realizedTaxPaid.toStringAsFixed(2)} ₽',
+                  'Кэш: ${_cash.toStringAsFixed(2)} ₽ • Выплаты: +${_totalIncomeReceived.toStringAsFixed(2)} ₽ • Налоги: ${_totalTaxPaid.toStringAsFixed(2)} ₽',
                   style: const TextStyle(fontSize: 12),
                 ),
               ],
@@ -287,75 +347,122 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('1. Покупка и продажа ЦБ',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                const Text('1. Продвижение по времени', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<int>(
-                  value: _selectedIdx,
-                  isExpanded: true,
-                  decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
-                  items: List.generate(_market.length, (i) {
-                    final m = _market[i];
-                    return DropdownMenuItem(
-                      value: i,
-                      child: Text('${m.ticker} (${m.kindLabel}) — ${m.priceRub} ₽'),
-                    );
-                  }),
-                  onChanged: (v) {
-                    if (v != null) setState(() => _selectedIdx = v);
-                  },
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Лот: ${inst.lotSize} шт. | Доходность: ~${inst.annualYieldPct}% | Долг/EBITDA: ${inst.debtToEbitda}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                const SizedBox(height: 6),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    const Text('Лотов: '),
-                    IconButton(
-                      onPressed: () => setState(() => _lotsToTrade = (_lotsToTrade - 1).clamp(1, 500)),
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                    Text('$_lotsToTrade ($units шт.)', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    IconButton(
-                      onPressed: () => setState(() => _lotsToTrade = (_lotsToTrade + 1).clamp(1, 500)),
-                      icon: const Icon(Icons.add_circle_outline),
-                    ),
-                  ],
-                ),
-                Text(
-                  'Итого списания: ${estTotal.toStringAsFixed(2)} ₽ (бумаги ${estClean.toStringAsFixed(2)} ₽ + НКД ${estNkd.toStringAsFixed(2)} ₽ + ком. ${estFee.toStringAsFixed(2)} ₽)',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: _buySelected,
-                        child: const Text('Купить'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _sellSelected,
-                        child: const Text('Продать'),
-                      ),
-                    ),
+                    OutlinedButton(onPressed: () => _advanceTime(7), child: const Text('+7 дней')),
+                    OutlinedButton(onPressed: () => _advanceTime(30), child: const Text('+1 мес.')),
+                    OutlinedButton(onPressed: () => _advanceTime(90), child: const Text('+1 квартал')),
+                    OutlinedButton(onPressed: () => _advanceTime(365), child: const Text('+1 год')),
                   ],
                 ),
               ],
             ),
           ),
         ),
-        if (_latestAudit != null) ...[
+        const SizedBox(height: 8),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('2. Сценарии рынка', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  value: _selectedScenarioIdx,
+                  isExpanded: true,
+                  decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+                  items: List.generate(
+                    SimScenarios.items.length,
+                    (i) => DropdownMenuItem(value: i, child: Text('${SimScenarios.items[i].id}: ${SimScenarios.items[i].title}')),
+                  ),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _selectedScenarioIdx = v);
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(scenario.description, style: const TextStyle(fontSize: 13)),
+                const SizedBox(height: 4),
+                Text('Косвенные признаки: ${scenario.indirectClues}', style: const TextStyle(fontSize: 12)),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: _applyScenario,
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('Применить сценарий к рынку'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('3. Покупка и продажа всех видов бумаг',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  value: _selectedInstrumentIdx,
+                  isExpanded: true,
+                  decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+                  items: List.generate(
+                    _instruments.length,
+                    (i) => DropdownMenuItem(
+                      value: i,
+                      child: Text('${_instruments[i].ticker} [${_instruments[i].kindLabel}] — ${_instruments[i].priceRub} ₽'),
+                    ),
+                  ),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _selectedInstrumentIdx = v);
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${inst.name} • Лот: ${inst.lotSize} шт. • Ставка/див: ~${inst.annualCouponOrDivPct}% • Долг/EBITDA: ${inst.debtToEbitda}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                Row(
+                  children: [
+                    const Text('Лотов: '),
+                    IconButton(
+                      onPressed: () => setState(() => _lots = (_lots - 1).clamp(1, 1000)),
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                    Text('$_lots ($units шт.)', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    IconButton(
+                      onPressed: () => setState(() => _lots = (_lots + 1).clamp(1, 1000)),
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Итого при покупке: ${estTotal.toStringAsFixed(2)} ₽ (бумаги ${estClean.toStringAsFixed(2)} ₽ + НКД ${estNkd.toStringAsFixed(2)} ₽ + ком. ${estFee.toStringAsFixed(2)} ₽)',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: FilledButton(onPressed: _buy, child: const Text('Купить'))),
+                    const SizedBox(width: 10),
+                    Expanded(child: OutlinedButton(onPressed: _sell, child: const Text('Продать'))),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_comment != null) ...[
           const SizedBox(height: 8),
           Card(
             shape: RoundedRectangleBorder(
-              side: BorderSide(color: _verdictColor(_latestAudit!.verdict), width: 1.5),
+              side: BorderSide(color: _tagColor(_comment!.tag), width: 1.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Padding(
@@ -366,84 +473,34 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
                   Row(
                     children: [
                       Chip(
-                        label: Text(_latestAudit!.verdict, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        backgroundColor: _verdictColor(_latestAudit!.verdict),
+                        label: Text(_comment!.tag, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        backgroundColor: _tagColor(_comment!.tag),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(_latestAudit!.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        child: Text(_comment!.headline, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  ..._latestAudit!.steps.map((s) => Padding(
+                  ..._comment!.details.map((d) => Padding(
                         padding: const EdgeInsets.only(bottom: 4),
-                        child: Text('• $s', style: const TextStyle(fontSize: 13)),
+                        child: Text('• $d', style: const TextStyle(fontSize: 13)),
                       )),
                   const Divider(),
-                  Text('Почему так / в чем подвох: ${_latestAudit!.whyNotElse}', style: const TextStyle(fontSize: 13)),
+                  Text('Почему так, а не иначе: ${_comment!.whySoNotOtherwise}', style: const TextStyle(fontSize: 13)),
                   const SizedBox(height: 6),
-                  Text('Рекомендация: ${_latestAudit!.recommendation}',
+                  Text('Рекомендация: ${_comment!.advice}',
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
-                  const Text('На что обратить внимание:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  ..._latestAudit!.watchList.map((w) => Text('— $w', style: const TextStyle(fontSize: 12))),
+                  const Text('На что обратить внимание дальше:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ..._comment!.watchNext.map((w) => Text('— $w', style: const TextStyle(fontSize: 12))),
                 ],
               ),
             ),
           ),
         ],
-        Card(
-          child: ExpansionTile(
-            title: Text('2. Чек-лист «5 Фильтров Профи» ($_passedCount/5)'),
-            subtitle: Text(_enforceFilters ? 'Строгий режим: нужно минимум 4 фильтра' : 'Свободный режим'),
-            children: [
-              SwitchListTile(
-                title: const Text('Блокировать покупку без 4 фильтров'),
-                value: _enforceFilters,
-                onChanged: (v) => setState(() => _enforceFilters = v),
-              ),
-              ...List.generate(5, (i) {
-                return CheckboxListTile(
-                  value: _filtersPassed[i],
-                  title: Text(_filterTexts[i], style: const TextStyle(fontSize: 13)),
-                  onChanged: (v) => setState(() => _filtersPassed[i] = v ?? false),
-                );
-              }),
-            ],
-          ),
-        ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('3. События рынка и купоны',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton(
-                      onPressed: () => _simulateRateShock(true),
-                      child: const Text('Ставка ЦБ ↑'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () => _simulateRateShock(false),
-                      child: const Text('Ставка ЦБ ↓'),
-                    ),
-                    FilledButton.tonal(
-                      onPressed: _accrueQuarterCoupon,
-                      child: const Text('Начислить выплаты'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+        const SizedBox(height: 8),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -452,7 +509,7 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
               children: [
                 const Text('4. Состав портфеля', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 const SizedBox(height: 6),
-                ..._portfolio.values.where((p) => p.units > 0).map((p) {
+                ..._holdings.values.where((p) => p.units > 0).map((p) {
                   final pnl = p.unrealizedPnl;
                   return ListTile(
                     dense: true,
@@ -471,52 +528,15 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
                     ),
                   );
                 }),
-                if (_portfolio.values.every((p) => p.units == 0))
-                  const Text('Портфель пока пуст — выбери бумагу выше и нажми «Купить».'),
+                if (_holdings.values.every((p) => p.units == 0))
+                  const Text('Портфель пока пуст — выбери бумагу в блоке 3 и нажми «Купить».'),
               ],
             ),
           ),
         ),
-        Card(
-          child: ExpansionTile(
-            title: Text('5. Справочник разборов ошибок (${TradeCoach.commonMistakes.length})'),
-            subtitle: const Text('Почему ошибаются и на что смотреть'),
-            children: TradeCoach.commonMistakes
-                .map((m) => ListTile(
-                      dense: true,
-                      title: Text('${m.code}: ${m.mistakeName}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      subtitle: Text(
-                        'Почему не так: ${m.whyWrong}\nКак правильно: ${m.howToFix}\nСмотреть на: ${m.watchSignal}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ))
-                .toList(),
-          ),
-        ),
-        if (_history.isNotEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('6. История сделок', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  const SizedBox(height: 6),
-                  ..._history.take(8).map((t) => ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('${t.side} ${t.ticker} (${t.units} шт.) — ${t.totalRub.toStringAsFixed(2)} ₽'),
-                        subtitle: Text(
-                          '${t.note} | Ком: ${t.feeRub.toStringAsFixed(2)} ₽${t.taxRub > 0 ? ' | Налог: ${t.taxRub.toStringAsFixed(2)} ₽' : ''}',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      )),
-                ],
-              ),
-            ),
-          ),
       ],
     );
   }
 }
+
 
