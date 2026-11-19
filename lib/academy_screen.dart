@@ -150,4 +150,3 @@ class _LessonCard extends StatelessWidget {
   }
 }
 
-
