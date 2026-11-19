@@ -4,6 +4,11 @@ import 'news_feed_02.dart';
 import 'news_feed_03.dart';
 import 'news_feed_04.dart';
 import 'news_feed_05.dart';
+import 'news_feed_06.dart';
+import 'news_feed_07.dart';
+import 'news_feed_08.dart';
+import 'news_feed_09.dart';
+import 'news_feed_10.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -22,6 +27,11 @@ class _NewsScreenState extends State<NewsScreen> {
         ...newsBatch03,
         ...newsBatch04,
         ...newsBatch05,
+        ...newsBatch06,
+        ...newsBatch07,
+        ...newsBatch08,
+        ...newsBatch09,
+        ...newsBatch10,
       ];
 
   @override
@@ -76,8 +86,10 @@ class _NewsScreenState extends State<NewsScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text('Новостей с разбором: ${filtered.length} (всего в базе: ${items.length})',
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+            child: Text(
+              'Новостей с разбором: ${filtered.length} (всего в базе: ${items.length})',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+            ),
           ),
         ),
         Expanded(
@@ -89,10 +101,16 @@ class _NewsScreenState extends State<NewsScreen> {
               return Card(
                 margin: const EdgeInsets.only(bottom: 10),
                 child: ExpansionTile(
-                  title: Text('#${item.id}. ${item.title}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: Text('${item.category} • ${item.plainMeaning}',
-                      maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                  title: Text(
+                    '#${item.id}. ${item.title}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    '${item.category} • ${item.plainMeaning}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                   childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                   children: [
                     _row('На пальцах:', item.plainMeaning),
@@ -128,3 +146,4 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 }
+
