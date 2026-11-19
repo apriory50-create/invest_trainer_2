@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'news_feed_01.dart';
 import 'news_feed_02.dart';
 import 'news_feed_03.dart';
+import 'news_feed_04.dart';
+import 'news_feed_05.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -18,6 +20,8 @@ class _NewsScreenState extends State<NewsScreen> {
         ...newsBatch01,
         ...newsBatch02,
         ...newsBatch03,
+        ...newsBatch04,
+        ...newsBatch05,
       ];
 
   @override
