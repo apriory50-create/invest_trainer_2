@@ -1,64 +1,87 @@
 import 'package:flutter/material.dart';
 import 'academy_screen.dart';
 import 'calculators_screen.dart';
+import 'news_screen.dart';
+import 'simulation_screen.dart';
 
 void main() {
   runApp(const InvestTrainerApp());
 }
 
-class InvestTrainerApp extends StatefulWidget {
+class InvestTrainerApp extends StatelessWidget {
   const InvestTrainerApp({super.key});
-
-  @override
-  State<InvestTrainerApp> createState() => _InvestTrainerAppState();
-}
-
-class _InvestTrainerAppState extends State<InvestTrainerApp> {
-  ThemeMode _themeMode = ThemeMode.dark;
-  int _tabIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Тренажер Инвестора',
       debugShowCheckedModeBanner: false,
-      themeMode: _themeMode,
+      title: 'Академия: с 0 до Профи',
       theme: ThemeData(
-        colorSchemeSeed: Colors.teal,
-        useMaterial3: true,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: Colors.teal,
-        useMaterial3: true,
         brightness: Brightness.dark,
-      ),
-      home: Scaffold(
-        body: _tabIndex == 0 ? const AcademyScreen() : const CalculatorsScreen(),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _tabIndex,
-          onDestinationSelected: (i) => setState(() => _tabIndex = i),
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.school), label: 'Академия'),
-            NavigationDestination(icon: Icon(Icons.calculate), label: 'Калькуляторы'),
-          ],
+        scaffoldBackgroundColor: const Color(0xFF0E131B),
+        colorScheme: const ColorScheme.dark(
+          primary: Colors.tealAccent,
+          secondary: Colors.blueAccent,
         ),
-        floatingActionButton: FloatingActionButton.small(
-          tooltip: 'Сменить тему',
-          onPressed: () {
-            setState(() {
-              _themeMode =
-                  _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-            });
-          },
-          child: Icon(
-            _themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
-          ),
-        ),
+        useMaterial3: true,
       ),
+      home: const HomeShell(),
     );
   }
 }
 
+class HomeShell extends StatefulWidget {
+  const HomeShell({super.key});
+
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  int _index = 0;
+
+  final List<Widget> _screens = const [
+    AcademyScreen(),
+    NewsScreen(),
+    SimulationScreen(),
+    CalculatorsScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _index,
+        children: _screens,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (i) => setState(() => _index = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school),
+            label: 'Академия',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.newspaper_outlined),
+            selectedIcon: Icon(Icons.newspaper),
+            label: 'Новости',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.trending_up_outlined),
+            selectedIcon: Icon(Icons.trending_up),
+            label: 'Симулятор',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calculate_outlined),
+            selectedIcon: Icon(Icons.calculate),
+            label: 'Калькуляторы',
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 
