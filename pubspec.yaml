@@ -1,7 +1,7 @@
 name: invest_trainer
-description: Академия инвестиций и симулятор портфеля (150 уроков и 100 сценариев).
+description: Профессиональный тренажер инвестора, портфельный аналитик и симулятор рынка.
 publish_to: 'none'
-version: 2.0.0+1
+version: 3.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  file_picker: ^8.1.2
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:
@@ -18,3 +20,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
