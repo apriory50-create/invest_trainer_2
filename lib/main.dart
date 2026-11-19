@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'real_investor_sim.dart';
+import 'news_screen.dart';
 
 void main() {
   runApp(const InvestTrainerApp());
@@ -14,11 +15,12 @@ class InvestTrainerApp extends StatefulWidget {
 
 class _InvestTrainerAppState extends State<InvestTrainerApp> {
   ThemeMode _themeMode = ThemeMode.system;
+  int _tabIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Симулятор Инвестора',
+      title: 'Симулятор и Новости Инвестора',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeData(
@@ -33,7 +35,7 @@ class _InvestTrainerAppState extends State<InvestTrainerApp> {
       ),
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Симулятор Инвестора'),
+          title: Text(_tabIndex == 0 ? 'Симулятор Инвестора' : 'Разбор Новостей (80+)'),
           actions: [
             IconButton(
               tooltip: 'Сменить тему',
@@ -49,10 +51,19 @@ class _InvestTrainerAppState extends State<InvestTrainerApp> {
             ),
           ],
         ),
-        body: const RealInvestorSimScreen(),
+        body: _tabIndex == 0 ? const RealInvestorSimScreen() : const NewsScreen(),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _tabIndex,
+          onDestinationSelected: (i) => setState(() => _tabIndex = i),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.candlestick_chart), label: 'Симулятор'),
+            NavigationDestination(icon: Icon(Icons.newspaper), label: 'Новости'),
+          ],
+        ),
       ),
     );
   }
 }
+
 
 
