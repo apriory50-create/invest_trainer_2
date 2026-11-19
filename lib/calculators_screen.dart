@@ -9,411 +9,247 @@ class CalculatorsScreen extends StatefulWidget {
 }
 
 class _CalculatorsScreenState extends State<CalculatorsScreen> {
-  int _selectedCalc = 0;
+  int _calcIndex = 0;
 
-  // 1. Параметры ОФЗ
-  double _ofzPricePercent = 54.0;
-  double _ofzCouponRub = 71.0;
-  double _ofzYears = 12.0;
-  double _ofzDuration = 7.2;
-  double _cbRateDrop = 4.0;
+  double _startCapital = 100000;
+  double _monthlyAdd = 15000;
+  double _ratePercent = 14;
+  int _years = 10;
 
-  // 2. Параметры ИИС-3
-  double _iisContribution = 400000.0;
-  int _ndflRate = 13;
-  double _iisYears = 5.0;
-  double _iisYield = 16.0;
+  double _entryPrice = 1000;
+  double _stopPrice = 950;
+  double _targetPrice = 1150;
+  double _riskRub = 5000;
 
-  // 3. Параметры Сложного процента
-  double _compInitial = 100000.0;
-  double _compMonthly = 15000.0;
-  double _compRate = 17.0;
-  double _compYears = 10.0;
+  double _currentPrice = 1000;
+  double _newPrice = 850;
+  double _currentShares = 10;
+  double _extraBudget = 20000;
 
-  String _fmt(double val) {
-    final int v = val.round();
-    final String s = v.toString();
-    final StringBuffer buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) {
-        buf.write(' ');
-      }
-      buf.write(s[i]);
-    }
-    return '${buf.toString()} ₽';
-  }
+  String _fmt(double v) => v.round().toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (m) => '${m[1]} ',
+      );
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      children: [
-        const Text(
-          'Инвест-Калькуляторы ПРО',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Двигай ползунки, чтобы мгновенно рассчитать доходность длинных ОФЗ на снижении ставки ЦБ, возврат НДФЛ по ИИС-3 и рост капитала.',
-          style: TextStyle(color: Colors.white70, fontSize: 13.5),
-        ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ChoiceChip(
-              label: const Text('1. Доходность ОФЗ'),
-              selected: _selectedCalc == 0,
-              onSelected: (_) => setState(() => _selectedCalc = 0),
-            ),
-            ChoiceChip(
-              label: const Text('2. Вычет ИИС-3'),
-              selected: _selectedCalc == 1,
-              onSelected: (_) => setState(() => _selectedCalc = 1),
-            ),
-            ChoiceChip(
-              label: const Text('3. Сложный процент'),
-              selected: _selectedCalc == 2,
-              onSelected: (_) => setState(() => _selectedCalc = 2),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (_selectedCalc == 0) _buildOfzCalculator(),
-        if (_selectedCalc == 1) _buildIisCalculator(),
-        if (_selectedCalc == 2) _buildCompoundCalculator(),
-      ],
-    );
-  }
-
-  Widget _buildOfzCalculator() {
-    final double buyPriceRub = _ofzPricePercent * 10.0;
-    final double currentCouponYield = (_ofzCouponRub / buyPriceRub) * 100.0;
-    final double bodyUpsidePercent = _ofzDuration * _cbRateDrop;
-    final double bodyProfitRub = buyPriceRub * (bodyUpsidePercent / 100.0);
-    final double firstYearTotalRub = _ofzCouponRub + bodyProfitRub;
-    final double firstYearTotalPercent = (firstYearTotalRub / buyPriceRub) * 100.0;
-    final double totalToMaturityRub = (1000.0 - buyPriceRub) + (_ofzCouponRub * _ofzYears);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Card(
-          color: const Color(0xFF00E676).withValues(alpha: 0.12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFF00E676), width: 1.5),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Калькуляторы')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          SegmentedButton<int>(
+            segments: const [
+              ButtonSegment(value: 0, label: Text('Сложный %')),
+              ButtonSegment(value: 1, label: Text('Риск/Прибыль')),
+              ButtonSegment(value: 2, label: Text('Усреднение')),
+            ],
+            selected: {_calcIndex},
+            onSelectionChanged: (s) => setState(() => _calcIndex = s.first),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Результат по 1 облигации (номинал 1000 ₽):',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00E676)),
-                ),
-                const SizedBox(height: 8),
-                Text('• Цена покупки в стакане: ${_fmt(buyPriceRub)} (${_ofzPricePercent.toStringAsFixed(0)}%)'),
-                Text('• Текущая купонная доходность: ${currentCouponYield.toStringAsFixed(1)}% годовых'),
-                Text(
-                  '• Рост тела при снижении ставки на ${_cbRateDrop.toStringAsFixed(1)}%: +${bodyUpsidePercent.toStringAsFixed(1)}% (+${_fmt(bodyProfitRub)})',
-                ),
-                const Divider(height: 18),
-                Text(
-                  'Итого за год разворота ставки (купон + рост цены): +${firstYearTotalPercent.toStringAsFixed(1)}% (+${_fmt(firstYearTotalRub)})',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14.5,
-                    color: Colors.amberAccent,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Общая прибыль при удержании до погашения (${_ofzYears.toStringAsFixed(0)} лет): +${_fmt(totalToMaturityRub)} на 1 бумагу',
-                  style: const TextStyle(fontSize: 12.5, color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _sliderCard(
-          title: 'Рыночная цена ОФЗ (% от номинала 1000 ₽)',
-          valueLabel: '${_ofzPricePercent.toStringAsFixed(0)}% (${_fmt(buyPriceRub)})',
-          value: _ofzPricePercent,
-          min: 45,
-          max: 105,
-          onChanged: (v) => setState(() => _ofzPricePercent = v),
-        ),
-        _sliderCard(
-          title: 'Годовой купон в рублях (например, у 26238 — 71 ₽)',
-          valueLabel: '${_ofzCouponRub.toStringAsFixed(0)} ₽/год',
-          value: _ofzCouponRub,
-          min: 50,
-          max: 150,
-          onChanged: (v) => setState(() => _ofzCouponRub = v),
-        ),
-        _sliderCard(
-          title: 'Дюрация облигации (чувствительность к ставке)',
-          valueLabel: '${_ofzDuration.toStringAsFixed(1)} года',
-          value: _ofzDuration,
-          min: 1.0,
-          max: 9.0,
-          onChanged: (v) => setState(() => _ofzDuration = v),
-        ),
-        _sliderCard(
-          title: 'Ожидаемое снижение ставки ЦБ / доходности за год',
-          valueLabel: '-${_cbRateDrop.toStringAsFixed(1)}%',
-          value: _cbRateDrop,
-          min: 0.0,
-          max: 10.0,
-          onChanged: (v) => setState(() => _cbRateDrop = v),
-        ),
-        _sliderCard(
-          title: 'Лет до погашения выпуска',
-          valueLabel: '${_ofzYears.toStringAsFixed(0)} лет',
-          value: _ofzYears,
-          min: 1,
-          max: 20,
-          onChanged: (v) => setState(() => _ofzYears = v),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildIisCalculator() {
-    final double deductibleBase = min(_iisContribution, 400000.0);
-    final double annualTaxRefund = deductibleBase * (_ndflRate / 100.0);
-    final double totalTaxRefunds = annualTaxRefund * _iisYears;
-
-    double portfolioValue = 0;
-    for (int y = 0; y < _iisYears.round(); y++) {
-      portfolioValue = (portfolioValue + _iisContribution + annualTaxRefund) * (1 + _iisYield / 100.0);
-    }
-    final double totalOwnMoney = _iisContribution * _iisYears.round();
-    final double netProfit = portfolioValue - totalOwnMoney;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Card(
-          color: Colors.amberAccent.withValues(alpha: 0.12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Colors.amberAccent, width: 1.5),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Расчет выгоды ИИС-3 (налоговый вычет + освобождение прибыли):',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amberAccent),
-                ),
-                const SizedBox(height: 8),
-                Text('• Возврат НДФЛ от государства за 1 год: +${_fmt(annualTaxRefund)}'),
-                Text('• Всего возвратов НДФЛ за ${_iisYears.toStringAsFixed(0)} лет: +${_fmt(totalTaxRefunds)}'),
-                Text('• Вложено своих денег: ${_fmt(totalOwnMoney)}'),
-                const Divider(height: 18),
-                Text(
-                  'Итоговый капитал на ИИС-3 (с реинвестированием вычетов): ${_fmt(portfolioValue)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14.5,
-                    color: Color(0xFF00E676),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Чистая прибыль + вычеты: +${_fmt(netProfit)} (налог на доход при закрытии ИИС-3 до 30 млн ₽ = 0 ₽)',
-                  style: const TextStyle(fontSize: 12.5, color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Выбери свою ставку НДФЛ (прогрессивная шкала 2025–2026):',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: [13, 15, 18, 20, 22].map((rate) {
-            return ChoiceChip(
-              label: Text('$rate%'),
-              selected: _ndflRate == rate,
-              onSelected: (_) => setState(() => _ndflRate = rate),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 12),
-        _sliderCard(
-          title: 'Ежегодный взнос на ИИС-3 (лимит вычета — с 400 000 ₽)',
-          valueLabel: _fmt(_iisContribution),
-          value: _iisContribution,
-          min: 50000,
-          max: 1000000,
-          onChanged: (v) => setState(() => _iisContribution = (v / 10000).round() * 10000.0),
-        ),
-        _sliderCard(
-          title: 'Средняя доходность активов на ИИС-3 (% годовых)',
-          valueLabel: '${_iisYield.toStringAsFixed(1)}%',
-          value: _iisYield,
-          min: 8,
-          max: 25,
-          onChanged: (v) => setState(() => _iisYield = v),
-        ),
-        _sliderCard(
-          title: 'Срок инвестирования на ИИС-3 (лет)',
-          valueLabel: '${_iisYears.toStringAsFixed(0)} лет',
-          value: _iisYears,
-          min: 5,
-          max: 20,
-          onChanged: (v) => setState(() => _iisYears = v.roundToDouble()),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCompoundCalculator() {
-    final int months = (_compYears * 12).round();
-    final double monthlyRate = (_compRate / 100.0) / 12.0;
-
-    double total = _compInitial;
-    for (int m = 0; m < months; m++) {
-      total = total * (1 + monthlyRate) + _compMonthly;
-    }
-
-    final double investedOwn = _compInitial + (_compMonthly * months);
-    final double compoundProfit = total - investedOwn;
-    final double passiveMonthlyIncome = (total * (_compRate / 100.0)) / 12.0;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Card(
-          color: Colors.cyanAccent.withValues(alpha: 0.12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Colors.cyanAccent, width: 1.5),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Магия сложного процента:',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.cyanAccent),
-                ),
-                const SizedBox(height: 8),
-                Text('• Внесено своих денег: ${_fmt(investedOwn)}'),
-                Text('• Начислено сложных процентов: +${_fmt(compoundProfit)}'),
-                const Divider(height: 18),
-                Text(
-                  'Итоговый капитал через ${_compYears.toStringAsFixed(0)} лет: ${_fmt(total)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Color(0xFF00E676),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Пассивная зарплата купонами/дивидендами с этого капитала: ~${_fmt(passiveMonthlyIncome)} в месяц!',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: Colors.amberAccent,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _sliderCard(
-          title: 'Стартовый капитал',
-          valueLabel: _fmt(_compInitial),
-          value: _compInitial,
-          min: 0,
-          max: 2000000,
-          onChanged: (v) => setState(() => _compInitial = (v / 10000).round() * 10000.0),
-        ),
-        _sliderCard(
-          title: 'Ежемесячное пополнение портфеля',
-          valueLabel: _fmt(_compMonthly),
-          value: _compMonthly,
-          min: 0,
-          max: 150000,
-          onChanged: (v) => setState(() => _compMonthly = (v / 1000).round() * 1000.0),
-        ),
-        _sliderCard(
-          title: 'Среднегодовая доходность с реинвестированием',
-          valueLabel: '${_compRate.toStringAsFixed(1)}% годовых',
-          value: _compRate,
-          min: 5,
-          max: 30,
-          onChanged: (v) => setState(() => _compRate = v),
-        ),
-        _sliderCard(
-          title: 'Горизонт инвестирования (лет)',
-          valueLabel: '${_compYears.toStringAsFixed(0)} лет',
-          value: _compYears,
-          min: 1,
-          max: 30,
-          onChanged: (v) => setState(() => _compYears = v.roundToDouble()),
-        ),
-      ],
-    );
-  }
-
-  Widget _sliderCard({
-    required String title,
-    required String valueLabel,
-    required double value,
-    required double min,
-    required double max,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  valueLabel,
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00E676)),
-                ),
-              ],
-            ),
-            Slider(
-              value: value.clamp(min, max),
-              min: min,
-              max: max,
-              onChanged: onChanged,
-            ),
-          ],
-        ),
+          const SizedBox(height: 16),
+          if (_calcIndex == 0) _buildCompoundCalc(),
+          if (_calcIndex == 1) _buildRiskCalc(),
+          if (_calcIndex == 2) _buildAverageCalc(),
+        ],
       ),
     );
   }
-}
 
+  Widget _sliderRow(
+    String label,
+    double val,
+    double min,
+    double max,
+    int divs,
+    String text,
+    ValueChanged<double> onChanged,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label),
+            Text(text, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        Slider(
+          value: val.clamp(min, max),
+          min: min,
+          max: max,
+          divisions: divs,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompoundCalc() {
+    final r = _ratePercent / 100 / 12;
+    final months = _years * 12;
+    double total = _startCapital;
+    for (int i = 0; i < months; i++) {
+      total = total * (1 + r) + _monthlyAdd;
+    }
+    final invested = _startCapital + _monthlyAdd * months;
+    final profit = total - invested;
+
+    return Column(
+      children: [
+        _sliderRow('Стартовый капитал', _startCapital, 0, 2000000, 40,
+            '${_fmt(_startCapital)} ₽', (v) => setState(() => _startCapital = v)),
+        _sliderRow('Пополнение в месяц', _monthlyAdd, 0, 200000, 40,
+            '${_fmt(_monthlyAdd)} ₽', (v) => setState(() => _monthlyAdd = v)),
+        _sliderRow('Доходность в год', _ratePercent, 1, 35, 34,
+            '${_ratePercent.toStringAsFixed(0)}%',
+            (v) => setState(() => _ratePercent = v)),
+        _sliderRow('Срок (лет)', _years.toDouble(), 1, 30, 29, '$_years лет',
+            (v) => setState(() => _years = v.round())),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF161B26),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Итоговый капитал: ${_fmt(total)} ₽',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text('Вложено своих: ${_fmt(invested)} ₽'),
+              Text('Доход от процентов: +${_fmt(profit)} ₽',
+                  style: const TextStyle(color: Colors.greenAccent)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF00E676).withOpacity(0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
+            'Подсказка: регулярное пополнение и время дают главный эффект сложного процента.',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRiskCalc() {
+    final riskPerShare = max(1.0, (_entryPrice - _stopPrice).abs());
+    final shares = max(1, (_riskRub / riskPerShare).floor());
+    final rewardPerShare = max(0.0, (_targetPrice - _entryPrice).abs());
+    final potentialProfit = shares * rewardPerShare;
+    final rr = potentialProfit / max(1.0, shares * riskPerShare);
+
+    return Column(
+      children: [
+        _sliderRow('Цена входа', _entryPrice, 10, 10000, 99,
+            '${_fmt(_entryPrice)} ₽', (v) => setState(() => _entryPrice = v)),
+        _sliderRow('Стоп-лосс', _stopPrice, 5, 10000, 99,
+            '${_fmt(_stopPrice)} ₽', (v) => setState(() => _stopPrice = v)),
+        _sliderRow('Цель (тейк-профит)', _targetPrice, 10, 15000, 149,
+            '${_fmt(_targetPrice)} ₽', (v) => setState(() => _targetPrice = v)),
+        _sliderRow('Допустимый риск', _riskRub, 500, 100000, 99,
+            '${_fmt(_riskRub)} ₽', (v) => setState(() => _riskRub = v)),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF161B26),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Размер позиции: $shares шт.',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text('Потенциальная прибыль: +${_fmt(potentialProfit)} ₽',
+                  style: const TextStyle(color: Colors.greenAccent)),
+              Text('Соотношение риск/доходность: 1 : ${rr.toStringAsFixed(1)}'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.amberAccent.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
+            'Подсказка: цельтесь минимум в соотношение 1:2 или выше, чтобы покрывать убыточные сделки.',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAverageCalc() {
+    final safeNewPrice = max(1.0, _newPrice);
+    final addedShares = (_extraBudget / safeNewPrice).floor();
+    final totalShares = max(1.0, _currentShares + addedShares);
+    final newAvg =
+        (_currentShares * _currentPrice + addedShares * safeNewPrice) /
+            totalShares;
+
+    return Column(
+      children: [
+        _sliderRow('Текущая средняя цена', _currentPrice, 10, 10000, 99,
+            '${_fmt(_currentPrice)} ₽', (v) => setState(() => _currentPrice = v)),
+        _sliderRow('Текущее кол-во бумаг', _currentShares, 1, 500, 99,
+            '${_currentShares.round()} шт.',
+            (v) => setState(() => _currentShares = v)),
+        _sliderRow('Цена докупки', _newPrice, 10, 10000, 99,
+            '${_fmt(_newPrice)} ₽', (v) => setState(() => _newPrice = v)),
+        _sliderRow('Сумма докупки', _extraBudget, 0, 500000, 100,
+            '${_fmt(_extraBudget)} ₽', (v) => setState(() => _extraBudget = v)),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF161B26),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Новая средняя цена: ${_fmt(newAvg)} ₽',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text('Будет докуплено: $addedShares шт.'),
+              Text('Всего бумаг в позиции: ${totalShares.round()} шт.'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.cyanAccent.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
+            'Подсказка: усредняйте только качественные активы, у которых не сломался бизнес.',
+          ),
+        ),
+      ],
+    );
+  }
+}
