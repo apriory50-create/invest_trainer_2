@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'real_investor_sim.dart';
-import 'news_screen.dart';
 import 'academy_screen.dart';
-import 'scenarios_screen.dart';
+import 'real_investor_sim.dart';
+import 'simulator_screen.dart';
+import 'news_screen.dart';
+import 'pro_filters_screen.dart';
 import 'calculators_screen.dart';
 
 void main() {
@@ -23,16 +24,18 @@ class _InvestTrainerAppState extends State<InvestTrainerApp> {
   final List<String> _titles = const [
     'Академия: с 0 до Профи',
     'Симулятор Инвестора',
-    'Рыночные Сценарии',
-    'Разбор Новостей',
+    'Сценарии Рынка (100)',
+    'Разбор Новостей (200+)',
+    '5 Фильтров Профи',
     'Калькуляторы',
   ];
 
   final List<Widget> _screens = const [
     AcademyScreen(),
     RealInvestorSimScreen(),
-    ScenariosScreen(),
+    SimulatorScreen(),
     NewsScreen(),
+    ProFiltersScreen(),
     CalculatorsScreen(),
   ];
 
@@ -79,9 +82,10 @@ class _InvestTrainerAppState extends State<InvestTrainerApp> {
           onDestinationSelected: (i) => setState(() => _tabIndex = i),
           destinations: const [
             NavigationDestination(icon: Icon(Icons.school), label: 'Академия'),
-            NavigationDestination(icon: Icon(Icons.candlestick_chart), label: 'Симулятор'),
+            NavigationDestination(icon: Icon(Icons.candlestick_chart), label: 'Портфель'),
             NavigationDestination(icon: Icon(Icons.psychology), label: 'Сценарии'),
             NavigationDestination(icon: Icon(Icons.newspaper), label: 'Новости'),
+            NavigationDestination(icon: Icon(Icons.verified_user), label: 'Фильтры'),
             NavigationDestination(icon: Icon(Icons.calculate), label: 'Расчеты'),
           ],
         ),
