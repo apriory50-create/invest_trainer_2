@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'models_data.dart';
 
 class AcademyScreen extends StatefulWidget {
   const AcademyScreen({super.key});
@@ -9,209 +8,141 @@ class AcademyScreen extends StatefulWidget {
 }
 
 class _AcademyScreenState extends State<AcademyScreen> {
-  final Set<int> _completedLessons = {};
+  int _selectedIdx = 0;
+
+  final List> _lessons = [
+    {
+      'title': '1. Что такое инвестиции и сложный процент',
+      'level': 'Новичок',
+      'time': '5 мин',
+      'summary':
+          'Деньги должны работать и приносить доход. Сложный процент — это когда проценты начисляются на уже накопленные проценты.',
+      'rule': 'Начинайте с малого, но регулярно — время важнее суммы.',
+    },
+    {
+      'title': '2. Акции, облигации и ETF',
+      'level': 'Новичок',
+      'time': '7 мин',
+      'summary':
+          'Акция — доля в бизнесе с потенциалом роста. Облигация — долг с предсказуемым купоном. ETF — готовый набор активов.',
+      'rule': 'Не кладите все яйца в одну корзину: диверсификация снижает риск.',
+    },
+    {
+      'title': '3. Риск, волатильность и горизонт',
+      'level': 'Базовый',
+      'time': '6 мин',
+      'summary':
+          'Высокая доходность всегда связана с колебаниями цены. Чем длиннее срок вложений, тем легче пережить просадки.',
+      'rule': 'Вкладывайте в рисковые активы только деньги на горизонте от 3–5 лет.',
+    },
+    {
+      'title': '4. Фундаментальный и новостной анализ',
+      'level': 'Продвинутый',
+      'time': '8 мин',
+      'summary':
+          'Смотрим на долги компании, прибыль, ставки ЦБ и новости отрасли, чтобы отличать шум от реальных изменений.',
+      'rule': 'Реагируйте на факты и отчёты, а не на панику в заголовках.',
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final progress = appLessons.isEmpty ? 0.0 : _completedLessons.length / appLessons.length;
-
+    final lesson = _lessons[_selectedIdx];
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Академия: с 0 до Профи'),
-        backgroundColor: const Color(0xFF1E293B),
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Академия инвестора')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        padding: const EdgeInsets.all(16),
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A),
+              color: const Color(0xFF161B26),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.tealAccent.withValues(alpha: 0.4)),
+              border: Border.all(color: Colors.tealAccent.withOpacity(0.4)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Прогресс обучения: ${_completedLessons.length} из ${appLessons.length}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  backgroundColor: Colors.white12,
-                  color: Colors.tealAccent,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Изучи теорию простым языком, разбери формулы и переходи во вкладку «Симулятор», чтобы проверить всё на практике.',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-              ],
+            child: const Text(
+              'Путь от нуля до уверенного инвестора: выберите урок ниже.',
+              style: TextStyle(fontSize: 14),
             ),
           ),
           const SizedBox(height: 16),
-          ...List.generate(appLessons.length, (index) {
-            final lesson = appLessons[index];
-            final isDone = _completedLessons.contains(index);
-
+          ...List.generate(_lessons.length, (i) {
+            final item = _lessons[i];
+            final active = i == _selectedIdx;
             return Card(
-              color: const Color(0xFF1E293B),
-              margin: const EdgeInsets.only(bottom: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: BorderSide(
-                  color: isDone ? Colors.greenAccent : Colors.white12,
-                  width: isDone ? 1.5 : 1,
+              color: active ? const Color(0xFF1D2738) : const Color(0xFF141923),
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                onTap: () => setState(() => _selectedIdx = i),
+                leading: CircleAvatar(
+                  backgroundColor: active
+                      ? Colors.tealAccent
+                      : Colors.blueAccent.withOpacity(0.2),
+                  foregroundColor: active ? Colors.black : Colors.white,
+                  child: Text('${i + 1}'),
                 ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.blueAccent.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            lesson.level,
-                            style: const TextStyle(
-                              color: Colors.lightBlueAccent,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        if (isDone)
-                          const Icon(Icons.check_circle, color: Colors.greenAccent),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      lesson.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      lesson.simpleText,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        height: 1.45,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _infoBox(
-                      icon: Icons.functions,
-                      title: 'Формула простыми словами:',
-                      text: lesson.formula,
-                      color: Colors.amberAccent,
-                    ),
-                    const SizedBox(height: 8),
-                    _infoBox(
-                      icon: Icons.calculate_outlined,
-                      title: 'Пример расчета в рублях:',
-                      text: lesson.example,
-                      color: Colors.tealAccent,
-                    ),
-                    const SizedBox(height: 8),
-                    _infoBox(
-                      icon: Icons.warning_amber_rounded,
-                      title: 'Главный риск:',
-                      text: lesson.risk,
-                      color: Colors.redAccent,
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isDone ? Colors.green.shade800 : Colors.teal,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            if (isDone) {
-                              _completedLessons.remove(index);
-                            } else {
-                              _completedLessons.add(index);
-                            }
-                          });
-                        },
-                        icon: Icon(isDone ? Icons.done_all : Icons.check),
-                        label: Text(
-                          isDone
-                              ? 'Урок пройден (нажми, чтобы повторить)'
-                              : 'Понятно! Отметить изученным',
-                        ),
-                      ),
-                    ),
-                  ],
+                title: Text(
+                  item['title']!,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text('${item['level']} • ${item['time']}'),
+                trailing: Icon(
+                  active ? Icons.check_circle : Icons.chevron_right,
+                  color: active ? Colors.tealAccent : Colors.white54,
                 ),
               ),
             );
           }),
+          const SizedBox(height: 8),
+          _LessonCard(lesson: lesson),
         ],
       ),
     );
   }
+}
 
-  Widget _infoBox({
-    required IconData icon,
-    required String title,
-    required String text,
-    required Color color,
-  }) {
+class _LessonCard extends StatelessWidget {
+  final Map<String, String> lesson;
+
+  const _LessonCard({required this.lesson});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black26,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        color: const Color(0xFF161B26),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
           Text(
-            text,
-            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.35),
+            lesson['title']!,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            lesson['summary']!,
+            style: const TextStyle(fontSize: 15, height: 1.45),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.amber.withOpacity(0.4)),
+            ),
+            child: Text(
+              'Главное правило: ${lesson['rule']!}',
+              style: const TextStyle(
+                color: Colors.amberAccent,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),
