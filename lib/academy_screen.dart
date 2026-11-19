@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'models.dart';
-import 'lessons_data.dart';
+import 'models_data.dart';
 
 class AcademyScreen extends StatefulWidget {
   const AcademyScreen({super.key});
@@ -10,281 +9,212 @@ class AcademyScreen extends StatefulWidget {
 }
 
 class _AcademyScreenState extends State<AcademyScreen> {
-  final Set<int> _completedIds = {};
-  String _selectedModule = 'Все';
-  String _search = '';
-
-  List<Lesson> get _lessons => LessonsData.allLessons;
-
-  List<String> get _modules {
-    final set = <String>{'Все'};
-    for (final l in _lessons) {
-      if (l.moduleTitle.isNotEmpty) set.add(l.moduleTitle);
-    }
-    return set.toList();
-  }
-
-  List<Lesson> get _filtered {
-    final q = _search.trim().toLowerCase();
-    return _lessons.where((l) {
-      final byMod = _selectedModule == 'Все' || l.moduleTitle == _selectedModule;
-      final byText = q.isEmpty ||
-          l.title.toLowerCase().contains(q) ||
-          l.content.toLowerCase().contains(q) ||
-          l.category.toLowerCase().contains(q);
-      return byMod && byText;
-    }).toList();
-  }
-
-  void _openLesson(Lesson lesson) {
-    int? chosenOption;
-    bool answered = false;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setModalState) {
-            return DraggableScrollableSheet(
-              expand: false,
-              initialChildSize: 0.92,
-              maxChildSize: 0.96,
-              minChildSize: 0.5,
-              builder: (_, scrollCtrl) {
-                return ListView(
-                  controller: scrollCtrl,
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Row(
-                      children: [
-                        Chip(label: Text(lesson.category)),
-                        const SizedBox(width: 8),
-                        Text('~${lesson.readingTimeMinutes} мин'),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      lesson.title,
-                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      lesson.moduleTitle,
-                      style: Theme.of(ctx).textTheme.bodySmall,
-                    ),
-                    const Divider(height: 24),
-                    Text(
-                      lesson.content,
-                      style: const TextStyle(fontSize: 15, height: 1.5),
-                    ),
-                    if (lesson.keyRules.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.amber.withOpacity(0.4)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Главные правила:',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 6),
-                            ...lesson.keyRules.map(
-                              (r) => Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Text('• $r'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Проверка понимания:',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(lesson.question),
-                          const SizedBox(height: 12),
-                          ...List.generate(lesson.options.length, (i) {
-                            final isCorrect = i == lesson.correctOptionIndex;
-                            final isSelected = chosenOption == i;
-                            Color? tileColor;
-                            if (answered) {
-                              if (isCorrect) {
-                                tileColor = Colors.green.withOpacity(0.25);
-                              } else if (isSelected) {
-                                tileColor = Colors.red.withOpacity(0.25);
-                              }
-                            }
-                            return Card(
-                              color: tileColor,
-                              child: ListTile(
-                                title: Text(lesson.options[i]),
-                                onTap: () {
-                                  setModalState(() {
-                                    chosenOption = i;
-                                    answered = true;
-                                  });
-                                  if (i == lesson.correctOptionIndex) {
-                                    setState(() => _completedIds.add(lesson.id));
-                                  }
-                                },
-                              ),
-                            );
-                          }),
-                          if (answered) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              lesson.explanation,
-                              style: const TextStyle(fontStyle: FontStyle.italic),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: () {
-                        setState(() => _completedIds.add(lesson.id));
-                        Navigator.pop(ctx);
-                      },
-                      icon: const Icon(Icons.check_circle),
-                      label: const Text('Отметить урок пройденным'),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
+  final Set<int> _completedLessons = {};
 
   @override
   Widget build(BuildContext context) {
-    final total = _lessons.length;
-    final done = _completedIds.length;
-    final list = _filtered;
+    final progress = appLessons.isEmpty ? 0.0 : _completedLessons.length / appLessons.length;
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Прогресс: $done из $total уроков',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(total == 0 ? '0%' : '${((done / total) * 100).round()}%'),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: total == 0 ? 0 : done / total,
-                    minHeight: 8,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ],
-              ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Академия: с 0 до Профи'),
+        backgroundColor: const Color(0xFF1E293B),
+        foregroundColor: Colors.white,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.tealAccent.withValues(alpha: 0.4)),
             ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: TextField(
-            decoration: const InputDecoration(
-              hintText: 'Поиск по урокам, терминам, темам...',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-            onChanged: (v) => setState(() => _search = v),
-          ),
-        ),
-        SizedBox(
-          height: 44,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            scrollDirection: Axis.horizontal,
-            itemCount: _modules.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final m = _modules[i];
-              return ChoiceChip(
-                label: Text(m, overflow: TextOverflow.ellipsis),
-                selected: _selectedModule == m,
-                onSelected: (_) => setState(() => _selectedModule = m),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 4),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: list.length,
-            itemBuilder: (_, i) {
-              final lesson = list[i];
-              final isDone = _completedIds.contains(lesson.id);
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: isDone ? Colors.green : Colors.teal,
-                    child: Icon(
-                      isDone ? Icons.check : Icons.menu_book,
-                      color: Colors.white,
-                      size: 18,
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Прогресс обучения: ${_completedLessons.length} из ${appLessons.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
-                  title: Text(
-                    lesson.title,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text('${lesson.moduleTitle} • ${lesson.readingTimeMinutes} мин'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _openLesson(lesson),
                 ),
-              );
-            },
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8,
+                  backgroundColor: Colors.white12,
+                  color: Colors.tealAccent,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Изучи теорию простым языком, разбери формулы и переходи во вкладку «Симулятор», чтобы проверить всё на практике.',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          ...List.generate(appLessons.length, (index) {
+            final lesson = appLessons[index];
+            final isDone = _completedLessons.contains(index);
+
+            return Card(
+              color: const Color(0xFF1E293B),
+              margin: const EdgeInsets.only(bottom: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(
+                  color: isDone ? Colors.greenAccent : Colors.white12,
+                  width: isDone ? 1.5 : 1,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            lesson.level,
+                            style: const TextStyle(
+                              color: Colors.lightBlueAccent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        if (isDone)
+                          const Icon(Icons.check_circle, color: Colors.greenAccent),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      lesson.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      lesson.simpleText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _infoBox(
+                      icon: Icons.functions,
+                      title: 'Формула простыми словами:',
+                      text: lesson.formula,
+                      color: Colors.amberAccent,
+                    ),
+                    const SizedBox(height: 8),
+                    _infoBox(
+                      icon: Icons.calculate_outlined,
+                      title: 'Пример расчета в рублях:',
+                      text: lesson.example,
+                      color: Colors.tealAccent,
+                    ),
+                    const SizedBox(height: 8),
+                    _infoBox(
+                      icon: Icons.warning_amber_rounded,
+                      title: 'Главный риск:',
+                      text: lesson.risk,
+                      color: Colors.redAccent,
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDone ? Colors.green.shade800 : Colors.teal,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            if (isDone) {
+                              _completedLessons.remove(index);
+                            } else {
+                              _completedLessons.add(index);
+                            }
+                          });
+                        },
+                        icon: Icon(isDone ? Icons.done_all : Icons.check),
+                        label: Text(
+                          isDone
+                              ? 'Урок пройден (нажми, чтобы повторить)'
+                              : 'Понятно! Отметить изученным',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoBox({
+    required IconData icon,
+    required String title,
+    required String text,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black26,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            text,
+            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.35),
+          ),
+        ],
+      ),
     );
   }
 }
