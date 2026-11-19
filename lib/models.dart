@@ -1,75 +1,88 @@
 class Lesson {
-  final String level;
+  final int id;
+  final String module;
   final String title;
-  final String simpleText;
-  final String formula;
-  final String example;
-  final String indicator;
-  final String risk;
+  final String theory;
+  final String terms;
+  final String entrySignals;
+  final String exitSignals;
+  final String strategy;
+  final String indirectSigns;
+  final String question;
+  final List<String> options;
+  final int correctIndex;
+  final String explanation;
 
   const Lesson({
-    required this.level,
+    required this.id,
+    required this.module,
     required this.title,
-    required this.simpleText,
-    required this.formula,
-    required this.example,
-    required this.indicator,
-    required this.risk,
+    required this.theory,
+    required this.terms,
+    required this.entrySignals,
+    required this.exitSignals,
+    required this.strategy,
+    required this.indirectSigns,
+    required this.question,
+    required this.options,
+    required this.correctIndex,
+    required this.explanation,
+  });
+
+  String get fullContent =>
+      '📘 ПОДРОБНЫЙ РАЗБОР:\n$theory\n\n'
+      '📖 СЛОВАРЬ ТЕРМИНОВ (ПРОСТЫМ ЯЗЫКОМ):\n$terms\n\n'
+      '🟢 КОГДА ВХОДИТЬ (ПОКУПАТЬ):\n$entrySignals\n\n'
+      '🔴 КОГДА ВЫХОДИТЬ (ПРОДАВАТЬ):\n$exitSignals\n\n'
+      '♟ КАКУЮ СТРАТЕГИЮ ПРИМЕНЯТЬ:\n$strategy\n\n'
+      '🕵️ КОСВЕННЫЕ ПРИЗНАКИ И СКРЫТЫЕ СИГНАЛЫ:\n$indirectSigns';
+}
+
+class MarketScenario {
+  final int id;
+  final String category;
+  final String title;
+  final String situation;
+  final String indirectClues;
+  final String assetAffected;
+  final List<String> actions;
+  final int bestActionIndex;
+  final double priceImpactPercent;
+  final String detailedBreakdown;
+
+  const MarketScenario({
+    required this.id,
+    required this.category,
+    required this.title,
+    required this.situation,
+    required this.indirectClues,
+    required this.assetAffected,
+    required this.actions,
+    required this.bestActionIndex,
+    required this.priceImpactPercent,
+    required this.detailedBreakdown,
   });
 }
 
-class AssetItem {
-  final String id;
+class AssetPosition {
   final String ticker;
   final String name;
   final String type;
-  final double price;
-  final double expectedYieldPct;
-  final String formulaExplain;
-  final String calcExplain;
-  final String indicatorExplain;
-  final String riskExplain;
+  int lots;
+  double averagePrice;
+  double currentPrice;
 
-  const AssetItem({
-    required this.id,
+  AssetPosition({
     required this.ticker,
     required this.name,
     required this.type,
-    required this.price,
-    required this.expectedYieldPct,
-    required this.formulaExplain,
-    required this.calcExplain,
-    required this.indicatorExplain,
-    required this.riskExplain,
+    required this.lots,
+    required this.averagePrice,
+    required this.currentPrice,
   });
-}
 
-class NewsOption {
-  final String actionText;
-  final double balanceBonusPct;
-  final String explanation;
-
-  const NewsOption({
-    required this.actionText,
-    required this.balanceBonusPct,
-    required this.explanation,
-  });
-}
-
-class MarketNews {
-  final String title;
-  final String category;
-  final String description;
-  final Map<String, double> typeImpactPct;
-  final String portfolioImpactExplain;
-  final List<NewsOption> options;
-
-  const MarketNews({
-    required this.title,
-    required this.category,
-    required this.description,
-    required this.typeImpactPct,
-    required this.portfolioImpactExplain,
-    required this.options,
-  });
+  double get totalValue => lots * currentPrice;
+  double get profit => lots * (currentPrice - averagePrice);
+  double get profitPercent =>
+      averagePrice > 0 ? ((currentPrice - averagePrice) / averagePrice) * 100 : 0;
 }
