@@ -13,7 +13,7 @@ class _AcademyScreenState extends State<AcademyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final progress = _completedLessons.length / appLessons.length;
+    final progress = appLessons.isEmpty ? 0.0 : _completedLessons.length / appLessons.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -159,7 +159,9 @@ class _AcademyScreenState extends State<AcademyScreen> {
                         },
                         icon: Icon(isDone ? Icons.done_all : Icons.check),
                         label: Text(
-                          isDone ? 'Урок пройден (нажми, чтобы повторить)' : 'Понятно! Отметить изученным',
+                          isDone
+                              ? 'Урок пройден (нажми, чтобы повторить)'
+                              : 'Понятно! Отметить изученным',
                         ),
                       ),
                     ),
@@ -216,3 +218,4 @@ class _AcademyScreenState extends State<AcademyScreen> {
     );
   }
 }
+
