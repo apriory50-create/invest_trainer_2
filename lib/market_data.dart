@@ -254,4 +254,3 @@ const List<StockAsset> initialMarketAssets = [
   StockAsset(ticker: 'MOEX', name: 'Московская Биржа', type: 'Акция', price: 215.0, dividendYield: 10.5),
 ];
 
-
