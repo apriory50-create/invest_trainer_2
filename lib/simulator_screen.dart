@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'scenarios_all.dart';
-import 'scenarios_part1.dart';
 
 class SimulatorScreen extends StatefulWidget {
   const SimulatorScreen({super.key});
@@ -87,7 +86,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
           ),
           const SizedBox(height: 6),
           SizedBox(
-            height: 54,
+            height: 46,
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               scrollDirection: Axis.horizontal,
@@ -168,7 +167,7 @@ class _ScenarioCard extends StatelessWidget {
           scenario.title,
           style: Theme.of(context)
               .textTheme
-              .headlineSmall
+              .titleLarge
               ?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
@@ -191,4 +190,5 @@ class _ScenarioCard extends StatelessWidget {
     );
   }
 }
+
 
