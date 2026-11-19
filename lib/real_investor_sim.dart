@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'sim_models.dart';
+import 'trade_coach.dart';
 
 class RealInvestorSimScreen extends StatefulWidget {
   const RealInvestorSimScreen({super.key});
@@ -9,8 +10,8 @@ class RealInvestorSimScreen extends StatefulWidget {
 }
 
 class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
-  static const double _commissionRate = 0.0005; // 0.05% комиссия брокера
-  static const double _taxRate = 0.13; // 13% НДФЛ с прибыли и купонов
+  static const double _commissionRate = 0.0005; // 0.05%
+  static const double _taxRate = 0.13; // 13%
 
   double _cash = 250000.0;
   double _realizedTaxPaid = 0.0;
@@ -18,8 +19,10 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
   int _selectedIdx = 0;
   int _lotsToTrade = 1;
   bool _enforceFilters = true;
+  bool _lastRateWentUp = false;
   final List<bool> _filtersPassed = [true, true, false, true, false];
   final List<TradeRecord> _history = [];
+  TradeAudit? _latestAudit;
 
   late final List<SimInstrument> _market = [
     SimInstrument(
@@ -97,7 +100,6 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
     final inst = _market[_selectedIdx];
     final pos = _portfolio[inst.ticker]!;
     final units = _lotsToTrade * inst.lotSize;
-
     if (units <= 0) return;
 
     if (_enforceFilters && _passedCount < 4) {
@@ -115,13 +117,17 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
       return;
     }
 
+    final totalBefore = _portfolioMarketTotal;
+    final cashAfter = _cash - totalCost;
+
     setState(() {
       final newUnits = pos.units + units;
       final newCleanBasis = pos.costBasis + cleanSum;
       pos.avgCleanPriceRub = newCleanBasis / newUnits;
       pos.paidNkdRub += nkdSum;
       pos.units = newUnits;
-      _cash -= totalCost;
+      _cash = cashAfter;
+
       _history.insert(
         0,
         TradeRecord(
@@ -135,8 +141,20 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
           note: 'Списано с учетом НКД и комиссии 0.05%',
         ),
       );
+
+      _latestAudit = TradeCoach.auditBuy(
+        instrument: inst,
+        position: pos,
+        units: units,
+        totalCost: totalCost,
+        nkdSum: nkdSum,
+        feeRub: fee,
+        cashAfter: cashAfter,
+        portfolioTotalBefore: totalBefore,
+        passedFilters: _passedCount,
+        lastRateWentUp: _lastRateWentUp,
+      );
     });
-    _showMsg('Куплено $units шт. ${inst.ticker} за ${totalCost.toStringAsFixed(2)} ₽');
   }
 
   void _sellSelected() {
@@ -163,6 +181,7 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
       }
       _cash += netProceeds;
       _realizedTaxPaid += tax;
+
       _history.insert(
         0,
         TradeRecord(
@@ -176,12 +195,22 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
           note: tax > 0 ? 'Удержан НДФЛ 13% с прибыли' : 'Налог не удержан',
         ),
       );
+
+      _latestAudit = TradeCoach.auditSell(
+        instrument: inst,
+        position: pos,
+        units: units,
+        netProceeds: netProceeds,
+        feeRub: fee,
+        taxRub: tax,
+        realizedProfit: profit,
+      );
     });
-    _showMsg('Продано $units шт. ${inst.ticker}. На счет зачислено ${netProceeds.toStringAsFixed(2)} ₽');
   }
 
   void _simulateRateShock(bool rateUp) {
     setState(() {
+      _lastRateWentUp = rateUp;
       for (final inst in _market) {
         double pct = 0.0;
         if (inst.kind == AssetKind.ofz) pct = rateUp ? -4.5 : 5.0;
@@ -214,10 +243,15 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
     _showMsg('Начислено выплат за квартал (после налогов): +${netCoupons.toStringAsFixed(2)} ₽');
   }
 
+  Color _verdictColor(String verdict) {
+    if (verdict == 'ПРАВИЛЬНО') return Colors.green;
+    if (verdict == 'ОШИБКА') return Colors.red;
+    return Colors.orange;
+  }
+
   @override
   Widget build(BuildContext context) {
     final inst = _market[_selectedIdx];
-    final pos = _portfolio[inst.ticker]!;
     final units = _lotsToTrade * inst.lotSize;
     final estClean = units * inst.priceRub;
     final estNkd = units * inst.accruedInterestPerUnit;
@@ -253,7 +287,7 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('1. Выберите ценную бумагу и объем',
+                const Text('1. Покупка и продажа ЦБ',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
@@ -273,10 +307,10 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Тип: ${inst.kindLabel} | Лот: ${inst.lotSize} шт. | Доходность: ~${inst.annualYieldPct}% | Долг/EBITDA: ${inst.debtToEbitda}',
+                  'Лот: ${inst.lotSize} шт. | Доходность: ~${inst.annualYieldPct}% | Долг/EBITDA: ${inst.debtToEbitda}',
                   style: const TextStyle(fontSize: 12),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     const Text('Лотов: '),
@@ -292,7 +326,7 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
                   ],
                 ),
                 Text(
-                  'К списанию при покупке: ${estTotal.toStringAsFixed(2)} ₽ (бумаги ${estClean.toStringAsFixed(2)} ₽ + НКД ${estNkd.toStringAsFixed(2)} ₽ + ком. ${estFee.toStringAsFixed(2)} ₽)',
+                  'Итого списания: ${estTotal.toStringAsFixed(2)} ₽ (бумаги ${estClean.toStringAsFixed(2)} ₽ + НКД ${estNkd.toStringAsFixed(2)} ₽ + ком. ${estFee.toStringAsFixed(2)} ₽)',
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 10),
@@ -317,6 +351,48 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
             ),
           ),
         ),
+        if (_latestAudit != null) ...[
+          const SizedBox(height: 8),
+          Card(
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: _verdictColor(_latestAudit!.verdict), width: 1.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Chip(
+                        label: Text(_latestAudit!.verdict, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        backgroundColor: _verdictColor(_latestAudit!.verdict),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(_latestAudit!.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ..._latestAudit!.steps.map((s) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text('• $s', style: const TextStyle(fontSize: 13)),
+                      )),
+                  const Divider(),
+                  Text('Почему так / в чем подвох: ${_latestAudit!.whyNotElse}', style: const TextStyle(fontSize: 13)),
+                  const SizedBox(height: 6),
+                  Text('Рекомендация: ${_latestAudit!.recommendation}',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  const Text('На что обратить внимание:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  ..._latestAudit!.watchList.map((w) => Text('— $w', style: const TextStyle(fontSize: 12))),
+                ],
+              ),
+            ),
+          ),
+        ],
         Card(
           child: ExpansionTile(
             title: Text('2. Чек-лист «5 Фильтров Профи» ($_passedCount/5)'),
@@ -343,7 +419,7 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('3. Рыночные события и выплаты',
+                const Text('3. События рынка и купоны',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 const SizedBox(height: 8),
                 Wrap(
@@ -360,7 +436,7 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
                     ),
                     FilledButton.tonal(
                       onPressed: _accrueQuarterCoupon,
-                      child: const Text('Начислить купоны/див.'),
+                      child: const Text('Начислить выплаты'),
                     ),
                   ],
                 ),
@@ -383,7 +459,7 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
                     contentPadding: EdgeInsets.zero,
                     title: Text('${p.instrument.ticker} — ${p.units} шт. (${p.marketValue.toStringAsFixed(0)} ₽)'),
                     subtitle: Text(
-                      'Ср. цена: ${p.avgCleanPriceRub.toStringAsFixed(2)} ₽ • НКД уплачено: ${p.paidNkdRub.toStringAsFixed(2)} ₽',
+                      'Ср. цена: ${p.avgCleanPriceRub.toStringAsFixed(2)} ₽ • НКД: ${p.paidNkdRub.toStringAsFixed(2)} ₽',
                       style: const TextStyle(fontSize: 12),
                     ),
                     trailing: Text(
@@ -401,6 +477,22 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
             ),
           ),
         ),
+        Card(
+          child: ExpansionTile(
+            title: Text('5. Справочник разборов ошибок (${TradeCoach.commonMistakes.length})'),
+            subtitle: const Text('Почему ошибаются и на что смотреть'),
+            children: TradeCoach.commonMistakes
+                .map((m) => ListTile(
+                      dense: true,
+                      title: Text('${m.code}: ${m.mistakeName}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      subtitle: Text(
+                        'Почему не так: ${m.whyWrong}\nКак правильно: ${m.howToFix}\nСмотреть на: ${m.watchSignal}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ))
+                .toList(),
+          ),
+        ),
         if (_history.isNotEmpty)
           Card(
             child: Padding(
@@ -408,7 +500,7 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('5. Журнал сделок', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const Text('6. История сделок', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 6),
                   ..._history.take(8).map((t) => ListTile(
                         dense: true,
@@ -427,3 +519,4 @@ class _RealInvestorSimScreenState extends State<RealInvestorSimScreen> {
     );
   }
 }
+
