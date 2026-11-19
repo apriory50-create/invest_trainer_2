@@ -29,7 +29,7 @@ class _AcademyScreenState extends State<AcademyScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF0F172A),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.tealAccent.withValues(alpha: 0.4)),
+              border: Border.all(color: Colors.tealAccent.withOpacity(0.4)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,7 +83,7 @@ class _AcademyScreenState extends State<AcademyScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.blueAccent.withValues(alpha: 0.2),
+                            color: Colors.blueAccent.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -187,7 +187,7 @@ class _AcademyScreenState extends State<AcademyScreen> {
       decoration: BoxDecoration(
         color: Colors.black26,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
