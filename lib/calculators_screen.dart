@@ -100,7 +100,7 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Card(
-          color: const Color(0xFF00E676).withOpacity(0.12),
+          color: const Color(0xFF00E676).withValues(alpha: 0.12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: Color(0xFF00E676), width: 1.5),
@@ -199,7 +199,7 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Card(
-          color: Colors.amberAccent.withOpacity(0.12),
+          color: Colors.amberAccent.withValues(alpha: 0.12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: Colors.amberAccent, width: 1.5),
@@ -297,7 +297,7 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Card(
-          color: Colors.cyanAccent.withOpacity(0.12),
+          color: Colors.cyanAccent.withValues(alpha: 0.12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: Colors.cyanAccent, width: 1.5),
