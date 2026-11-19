@@ -10,7 +10,7 @@ class AcademyScreen extends StatefulWidget {
 class _AcademyScreenState extends State<AcademyScreen> {
   int _selectedIdx = 0;
 
-  final List> _lessons = [
+  final _lessons = [
     {
       'title': '1. Что такое инвестиции и сложный процент',
       'level': 'Новичок',
