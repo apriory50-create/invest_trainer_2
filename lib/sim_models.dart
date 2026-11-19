@@ -7,10 +7,12 @@ class SimInstrument {
   final String sector;
   final int lotSize;
   final double nominal;
-  final double accruedInterestPerUnit; // НКД на 1 облигацию
-  final double annualYieldPct; // Годовой купон или дивдоходность в %
-  final double debtToEbitda; // Долговая нагрузка
-  double priceRub; // Текущая рыночная цена за 1 шт в рублях
+  final double annualCouponOrDivPct; // Годовая ставка купона или дивиденда %
+  final double debtToEbitda; // Долговая нагрузка эмитента
+  final int maturityMonthsLeft; // Остаток до погашения для облигаций (мес.)
+  final double rateSensitivity; // Чувствительность к ставке ЦБ
+  double priceRub;
+  double accruedInterestPerUnit; // Текущий НКД на 1 бумагу
 
   SimInstrument({
     required this.ticker,
@@ -19,10 +21,12 @@ class SimInstrument {
     required this.sector,
     required this.lotSize,
     required this.nominal,
-    required this.accruedInterestPerUnit,
-    required this.annualYieldPct,
+    required this.annualCouponOrDivPct,
     required this.debtToEbitda,
+    required this.maturityMonthsLeft,
+    required this.rateSensitivity,
     required this.priceRub,
+    required this.accruedInterestPerUnit,
   });
 
   String get kindLabel {
@@ -42,8 +46,8 @@ class SimInstrument {
 class HoldingPosition {
   final SimInstrument instrument;
   int units;
-  double avgCleanPriceRub; // Средняя цена покупки без НКД
-  double paidNkdRub; // Суммарно уплаченный НКД
+  double avgCleanPriceRub;
+  double paidNkdRub;
 
   HoldingPosition({
     required this.instrument,
@@ -59,24 +63,45 @@ class HoldingPosition {
       costBasis > 0 ? ((marketValue - costBasis) / costBasis) * 100 : 0.0;
 }
 
-class TradeRecord {
-  final String side; // КУПЛЯ / ПРОДАЖА
-  final String ticker;
-  final int units;
-  final double totalRub;
-  final double feeRub;
-  final double nkdRub;
-  final double taxRub;
-  final String note;
+class SimScenario {
+  final String id;
+  final String title;
+  final String category;
+  final String description;
+  final String indirectClues;
+  final String whyMarketReacts;
+  final String whatToDo;
+  final Map<AssetKind, double> priceShiftPct;
+  final double keyRateDeltaPct;
 
-  const TradeRecord({
-    required this.side,
-    required this.ticker,
-    required this.units,
-    required this.totalRub,
-    required this.feeRub,
-    required this.nkdRub,
-    required this.taxRub,
-    required this.note,
+  const SimScenario({
+    required this.id,
+    required this.title,
+    required this.category,
+    required this.description,
+    required this.indirectClues,
+    required this.whyMarketReacts,
+    required this.whatToDo,
+    required this.priceShiftPct,
+    required this.keyRateDeltaPct,
   });
 }
+
+class CoachComment {
+  final String tag; // ПРАВИЛЬНО | ОШИБКА | ВНИМАНИЕ | ВРЕМЯ | СЦЕНАРИЙ
+  final String headline;
+  final List<String> details;
+  final String whySoNotOtherwise;
+  final String advice;
+  final List<String> watchNext;
+
+  const CoachComment({
+    required this.tag,
+    required this.headline,
+    required this.details,
+    required this.whySoNotOtherwise,
+    required this.advice,
+    required this.watchNext,
+  });
+}
+
